@@ -343,31 +343,34 @@ export default function WishCard({ wish }: WishCardProps) {
             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/15 to-purple-500/15"></div>
 
             <div className="relative">
-              <div className="flex items-center justify-between mb-3 md:mb-4">
-                <div className="flex items-center gap-2 md:gap-3">
-                  <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+              {/* 手機端優化：標題和按鈕分開布局 */}
+              <div className="flex items-start justify-between mb-3 md:mb-4">
+                <div className="flex items-start gap-2 md:gap-3 flex-1 min-w-0">
+                  <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/30 flex-shrink-0">
                     <Sparkles className="w-3.5 h-3.5 md:w-4 md:h-4 text-white animate-pulse" />
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-white text-base md:text-lg">AI 解決方案建議</h4>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge className="bg-indigo-500/30 text-indigo-100 border border-indigo-400/50 text-xs px-2 py-0.5 font-medium">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <h4 className="font-semibold text-white text-sm md:text-lg leading-tight">AI 解決方案建議</h4>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowSolutions(!showSolutions)}
+                        className="text-indigo-200 hover:text-white hover:bg-indigo-700/50 px-2 py-1 transition-all duration-200 flex-shrink-0"
+                      >
+                        {showSolutions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
+                      <Badge className="bg-indigo-500/30 text-indigo-100 border border-indigo-400/50 text-xs px-1.5 md:px-2 py-0.5 font-medium whitespace-nowrap">
                         信心度 {solutionRecommendation.confidence}%
                       </Badge>
-                      <Badge className="bg-purple-500/30 text-purple-100 border border-purple-400/50 text-xs px-2 py-0.5 font-medium">
+                      <Badge className="bg-purple-500/30 text-purple-100 border border-purple-400/50 text-xs px-1.5 md:px-2 py-0.5 font-medium whitespace-nowrap">
                         智能分析
                       </Badge>
                     </div>
                   </div>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowSolutions(!showSolutions)}
-                  className="text-indigo-200 hover:text-white hover:bg-indigo-700/50 px-2 transition-all duration-200"
-                >
-                  {showSolutions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                </Button>
               </div>
 
               {/* 個人化訊息 */}
@@ -386,54 +389,61 @@ export default function WishCard({ wish }: WishCardProps) {
                       className="p-3 md:p-4 bg-slate-800/60 rounded-lg border border-slate-600/50 hover:bg-slate-700/60 hover:border-slate-500/70 transition-all duration-200 cursor-pointer"
                       onClick={() => setSelectedSolution(selectedSolution?.id === solution.id ? null : solution)}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="text-xl md:text-2xl">{solution.icon}</div>
-                          <div>
-                            <div className="flex items-center gap-2 mb-1">
-                              <h5 className="font-semibold text-white text-sm md:text-base">{solution.name}</h5>
-                              <Badge
-                                className={`text-xs px-2 py-0.5 border ${getDifficultyColor(solution.difficulty)}`}
-                              >
-                                {getDifficultyLabel(solution.difficulty)}
-                              </Badge>
+                      {/* 手機端優化：重新設計布局結構 */}
+                      <div className="flex items-start gap-3">
+                        <div className="text-xl md:text-2xl flex-shrink-0 mt-0.5">{solution.icon}</div>
+                        <div className="flex-1 min-w-0">
+                          {/* 標題行：標題和時間 */}
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <h5 className="font-semibold text-white text-sm md:text-base leading-tight flex-1 min-w-0">
+                              {solution.name}
+                            </h5>
+                            <div className="flex items-center gap-1.5 text-xs text-slate-400 flex-shrink-0">
+                              <Clock className="w-3 h-3" />
+                              <span className="font-medium whitespace-nowrap">{solution.timeframe}</span>
                             </div>
-                            <p className="text-slate-300 text-xs md:text-sm">{solution.description}</p>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-slate-400">
-                          <Clock className="w-3 h-3" />
-                          <span className="font-medium">{solution.timeframe}</span>
+                          
+                          {/* 標籤和描述 */}
+                          <div className="space-y-2">
+                            <Badge
+                              className={`text-xs px-2 py-0.5 border ${getDifficultyColor(solution.difficulty)} inline-block`}
+                            >
+                              {getDifficultyLabel(solution.difficulty)}
+                            </Badge>
+                            <p className="text-slate-300 text-xs md:text-sm leading-relaxed">
+                              {solution.description}
+                            </p>
+                          </div>
                         </div>
                       </div>
 
-                      {/* 展開的詳細資訊 */}
+                      {/* 展開的詳細資訊 - 手機端優化 */}
                       {selectedSolution?.id === solution.id && (
-                        <div className="mt-4 pt-4 border-t border-slate-600/40 space-y-3 animate-in slide-in-from-top-1 duration-200">
+                        <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-slate-600/40 space-y-3 md:space-y-4 animate-in slide-in-from-top-1 duration-200">
                           <div>
-                            <h6 className="text-sm font-semibold text-cyan-300 mb-2 flex items-center gap-1">
+                            <h6 className="text-xs md:text-sm font-semibold text-cyan-300 mb-2 flex items-center gap-1">
                               ✨ 主要效益
                             </h6>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div className="space-y-1.5 md:grid md:grid-cols-2 md:gap-2 md:space-y-0">
                               {solution.benefits.map((benefit, idx) => (
-                                <div key={idx} className="flex items-center gap-2 text-xs text-slate-200">
-                                  <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full flex-shrink-0"></div>
-                                  {benefit}
+                                <div key={idx} className="flex items-start gap-2 text-xs text-slate-200 leading-relaxed">
+                                  <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full flex-shrink-0 mt-1.5"></div>
+                                  <span>{benefit}</span>
                                 </div>
                               ))}
                             </div>
                           </div>
 
                           <div>
-                            <h6 className="text-sm font-semibold text-blue-300 mb-2 flex items-center gap-1">
+                            <h6 className="text-xs md:text-sm font-semibold text-blue-300 mb-2 flex items-center gap-1">
                               🛠️ 技術方案
                             </h6>
-                            <div className="flex flex-wrap gap-1">
+                            <div className="flex flex-wrap gap-1.5">
                               {solution.techStack.map((tech, idx) => (
                                 <Badge
                                   key={idx}
-                                  variant="secondary"
-                                  className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-200 border border-blue-400/30"
+                                  className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-200 border border-blue-400/30 whitespace-nowrap"
                                 >
                                   {tech}
                                 </Badge>
@@ -442,14 +452,14 @@ export default function WishCard({ wish }: WishCardProps) {
                           </div>
 
                           <div>
-                            <h6 className="text-sm font-semibold text-yellow-300 mb-2 flex items-center gap-1">
+                            <h6 className="text-xs md:text-sm font-semibold text-yellow-300 mb-2 flex items-center gap-1">
                               💡 應用實例
                             </h6>
-                            <div className="space-y-1">
+                            <div className="space-y-1.5">
                               {solution.examples.map((example, idx) => (
-                                <div key={idx} className="text-xs text-slate-200 flex items-center gap-2">
-                                  <div className="w-1 h-1 bg-yellow-400 rounded-full flex-shrink-0"></div>
-                                  {example}
+                                <div key={idx} className="text-xs text-slate-200 flex items-start gap-2 leading-relaxed">
+                                  <div className="w-1 h-1 bg-yellow-400 rounded-full flex-shrink-0 mt-1.5"></div>
+                                  <span>{example}</span>
                                 </div>
                               ))}
                             </div>
@@ -459,15 +469,14 @@ export default function WishCard({ wish }: WishCardProps) {
                     </div>
                   ))}
 
-                  {/* 專業團隊協助訊息 */}
-                  <div className="mt-4 p-3 bg-gradient-to-r from-cyan-800/40 to-blue-800/40 rounded-lg border border-cyan-500/50">
+                  {/* 專業團隊協助訊息 - 手機端優化 */}
+                  <div className="mt-3 md:mt-4 p-3 md:p-4 bg-gradient-to-r from-cyan-800/40 to-blue-800/40 rounded-lg border border-cyan-500/50">
                     <div className="flex items-center gap-2 mb-2">
-                      <Zap className="w-4 h-4 text-cyan-300" />
-                      <span className="text-sm font-semibold text-cyan-200">專業團隊支援</span>
+                      <Zap className="w-3.5 h-3.5 md:w-4 md:h-4 text-cyan-300 flex-shrink-0" />
+                      <span className="text-xs md:text-sm font-semibold text-cyan-200">專業團隊支援</span>
                     </div>
                     <p className="text-xs md:text-sm text-cyan-100 leading-relaxed">
-                      我們的 AI
-                      團隊和技術專家會根據這些建議，為你制定具體的實施方案。團隊將主動與你聯繫，協助你逐步改善工作流程！
+                      我們的 AI 團隊和技術專家會根據這些建議，為你制定具體的實施方案。團隊將主動與你聯繫，協助你逐步改善工作流程！
                     </p>
                   </div>
                 </div>

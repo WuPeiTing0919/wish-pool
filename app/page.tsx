@@ -181,7 +181,7 @@ export default function HomePage() {
       </header>
 
       {/* Main Content - 使用 flex-1 讓內容區域填滿剩餘空間 */}
-      <main className="flex-1 flex flex-col justify-center py-12 md:py-20 px-4 relative">
+      <main className="flex-1 flex flex-col justify-center py-12 md:py-20 px-2 sm:px-4 relative">
         <div className="container mx-auto text-center max-w-4xl">
           {/* 主要許願瓶 - 添加呼吸動畫 */}
           <div className="mb-12 md:mb-16 relative">

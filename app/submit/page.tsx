@@ -261,7 +261,7 @@ export default function SubmitPage() {
       </header>
 
       {/* Main Content - 手機優化 */}
-      <main className="py-12 md:py-12 px-4">
+      <main className="py-12 md:py-12 px-2 sm:px-4">
         <div className="container mx-auto max-w-2xl">
           <div className="text-center mb-8 md:mb-10">
             {/* 小許願瓶 - 添加呼吸動畫 */}

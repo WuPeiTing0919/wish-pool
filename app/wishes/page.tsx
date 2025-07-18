@@ -5,11 +5,178 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Sparkles, ArrowLeft, Search, Plus, Filter, X, BarChart3, Eye, Users } from "lucide-react"
+import { Sparkles, ArrowLeft, Search, Plus, Filter, X, BarChart3, Eye, Users, ChevronLeft, ChevronRight } from "lucide-react"
 import WishCard from "@/components/wish-card"
 import HeaderMusicControl from "@/components/header-music-control"
 import { categories, categorizeWishMultiple, getCategoryStats, type Wish } from "@/lib/categorization"
 import { WishService } from "@/lib/supabase-service"
+
+// 分頁組件
+interface PaginationProps {
+  currentPage: number
+  totalPages: number
+  onPageChange: (page: number) => void
+}
+
+function PaginationComponent({ currentPage, totalPages, onPageChange }: PaginationProps) {
+  // 根據螢幕尺寸調整顯示策略
+  const getMobilePageNumbers = () => {
+    const pages = []
+    
+    if (totalPages <= 3) {
+      // 小於等於3頁，全部顯示
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      // 手機端簡化邏輯：只顯示當前頁和相鄰頁
+      if (currentPage === 1) {
+        pages.push(1, 2, '...', totalPages)
+      } else if (currentPage === totalPages) {
+        pages.push(1, '...', totalPages - 1, totalPages)
+      } else {
+        if (currentPage === 2) {
+          pages.push(1, 2, 3, '...', totalPages)
+        } else if (currentPage === totalPages - 1) {
+          pages.push(1, '...', totalPages - 2, totalPages - 1, totalPages)
+        } else {
+          pages.push(1, '...', currentPage, '...', totalPages)
+        }
+      }
+    }
+    
+    return pages
+  }
+
+  const getDesktopPageNumbers = () => {
+    const pages = []
+    const maxVisiblePages = 5
+    
+    if (totalPages <= maxVisiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i)
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) {
+          pages.push(i)
+        }
+        pages.push('...')
+        pages.push(totalPages)
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1)
+        pages.push('...')
+        for (let i = totalPages - 3; i <= totalPages; i++) {
+          pages.push(i)
+        }
+      } else {
+        pages.push(1)
+        pages.push('...')
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) {
+          pages.push(i)
+        }
+        pages.push('...')
+        pages.push(totalPages)
+      }
+    }
+    
+    return pages
+  }
+
+  return (
+    <div className="flex items-center justify-center gap-1 sm:gap-2 mt-8 px-2 sm:px-4">
+      {/* 上一頁按鈕 */}
+      <Button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="relative overflow-hidden bg-slate-800/90 hover:bg-slate-700/90 disabled:bg-slate-900/50 disabled:opacity-40 text-slate-200 border border-slate-600/50 hover:border-cyan-400/50 transition-all duration-300 min-w-[36px] sm:min-w-[44px] h-9 sm:h-11 shrink-0"
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 to-blue-500/0 hover:from-cyan-500/10 hover:to-blue-500/10 transition-all duration-300"></div>
+        <ChevronLeft className="w-3 h-3 sm:w-4 sm:h-4 relative z-10" />
+      </Button>
+
+      {/* 桌面端頁數按鈕 */}
+      <div className="hidden sm:flex items-center gap-1">
+        {getDesktopPageNumbers().map((page, index) => {
+          if (page === '...') {
+            return (
+              <span key={`ellipsis-${index}`} className="px-3 py-2 text-slate-400 text-sm">
+                ...
+              </span>
+            )
+          }
+          
+          const pageNumber = page as number
+          const isActive = pageNumber === currentPage
+          
+          return (
+            <Button
+              key={pageNumber}
+              onClick={() => onPageChange(pageNumber)}
+              className={`
+                relative overflow-hidden min-w-[44px] h-11 text-sm font-medium transition-all duration-300
+                ${isActive 
+                  ? 'bg-gradient-to-r from-cyan-500/90 to-blue-600/90 text-white border border-cyan-400/50 shadow-lg shadow-cyan-500/25 transform scale-105'
+                  : 'bg-slate-800/90 hover:bg-slate-700/90 text-slate-200 border border-slate-600/50 hover:border-cyan-400/50'
+                }
+              `}
+            >
+              {isActive && (
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 animate-pulse"></div>
+              )}
+              <span className="relative z-10">{pageNumber}</span>
+            </Button>
+          )
+        })}
+      </div>
+
+      {/* 手機端頁數按鈕 */}
+      <div className="flex sm:hidden items-center gap-0.5">
+        {getMobilePageNumbers().map((page, index) => {
+          if (page === '...') {
+            return (
+              <span key={`mobile-ellipsis-${index}`} className="px-1.5 py-2 text-slate-400 text-xs">
+                ...
+              </span>
+            )
+          }
+          
+          const pageNumber = page as number
+          const isActive = pageNumber === currentPage
+          
+          return (
+            <Button
+              key={`mobile-${pageNumber}`}
+              onClick={() => onPageChange(pageNumber)}
+              className={`
+                relative overflow-hidden min-w-[32px] h-9 text-xs font-medium transition-all duration-300
+                ${isActive 
+                  ? 'bg-gradient-to-r from-cyan-500/90 to-blue-600/90 text-white border border-cyan-400/50 shadow-lg shadow-cyan-500/25'
+                  : 'bg-slate-800/90 hover:bg-slate-700/90 text-slate-200 border border-slate-600/50 hover:border-cyan-400/50'
+                }
+              `}
+            >
+              {isActive && (
+                <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/20 to-blue-400/20 animate-pulse"></div>
+              )}
+              <span className="relative z-10">{pageNumber}</span>
+            </Button>
+          )
+        })}
+      </div>
+
+      {/* 下一頁按鈕 */}
+      <Button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="relative overflow-hidden bg-slate-800/90 hover:bg-slate-700/90 disabled:bg-slate-900/50 disabled:opacity-40 text-slate-200 border border-slate-600/50 hover:border-cyan-400/50 transition-all duration-300 min-w-[36px] sm:min-w-[44px] h-9 sm:h-11 shrink-0"
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/0 to-blue-500/0 hover:from-cyan-500/10 hover:to-blue-500/10 transition-all duration-300"></div>
+        <ChevronRight className="w-3 h-3 sm:w-4 sm:h-4 relative z-10" />
+      </Button>
+    </div>
+  )
+}
 
 export default function WishesPage() {
   const [wishes, setWishes] = useState<Wish[]>([])
@@ -21,6 +188,12 @@ export default function WishesPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [totalWishes, setTotalWishes] = useState(0)
   const [privateCount, setPrivateCount] = useState(0)
+  
+  // 分頁相關狀態
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(5)
+  const [paginatedWishes, setPaginatedWishes] = useState<Wish[]>([])
+  const [totalPages, setTotalPages] = useState(0)
 
   useEffect(() => {
     const fetchWishes = async () => {
@@ -99,6 +272,21 @@ export default function WishesPage() {
 
     setFilteredWishes(filtered)
   }, [publicWishes, searchTerm, selectedCategories])
+
+  // 分頁計算 useEffect
+  useEffect(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage
+    const endIndex = startIndex + itemsPerPage
+    const wishesToPaginate = filteredWishes.length > 0 ? filteredWishes : publicWishes
+    
+    setPaginatedWishes(wishesToPaginate.slice(startIndex, endIndex))
+    setTotalPages(Math.ceil(wishesToPaginate.length / itemsPerPage))
+  }, [filteredWishes, publicWishes, currentPage, itemsPerPage])
+
+  // 重置分頁當篩選條件改變時
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, selectedCategories])
 
   const toggleCategory = (categoryName: string) => {
     setSelectedCategories((prev) =>
@@ -232,16 +420,16 @@ export default function WishesPage() {
       </header>
 
       {/* Main Content - 手機優化 */}
-      <main className="py-8 md:py-12 px-4">
+      <main className="py-8 md:py-12 px-2 sm:px-4">
         <div className="container mx-auto max-w-4xl">
           <div className="text-center mb-6 md:mb-8">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 md:mb-4">聆聽每一份真實經歷</h2>
-            <p className="text-blue-200 mb-4 md:mb-6 text-sm md:text-base px-4">
+            <p className="text-blue-200 mb-4 md:mb-6 text-sm md:text-base px-2 sm:px-4">
               這裡收集了許多職場工作者願意公開分享的真實困擾和經驗
             </p>
 
             {/* Search Bar and Filter Button - 並排布局 */}
-            <div className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto px-2 md:px-0 mb-4">
+            <div className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto px-1 sm:px-2 md:px-0 mb-4">
               {/* Search Input */}
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-4 h-4" />
@@ -277,7 +465,7 @@ export default function WishesPage() {
 
           {/* Category Filters */}
           {showFilters && (
-            <div className="mb-6 md:mb-8 p-4 md:p-6 bg-slate-800/30 backdrop-blur-sm rounded-xl border border-slate-600/50 animate-in slide-in-from-top-2 duration-200">
+            <div className="mb-6 md:mb-8 p-3 sm:p-4 md:p-6 bg-slate-800/30 backdrop-blur-sm rounded-xl border border-slate-600/50 animate-in slide-in-from-top-2 duration-200 mx-1 sm:mx-0">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                   <Filter className="w-5 h-5" />
@@ -364,12 +552,18 @@ export default function WishesPage() {
               <div className="inline-flex items-center gap-2 bg-slate-800/50 backdrop-blur-sm rounded-full px-3 md:px-4 py-2 text-blue-200 border border-blue-700/50 text-xs md:text-sm">
                 <Eye className="w-3 h-3 md:w-4 md:h-4 text-cyan-400" />
                 <span className="hidden sm:inline">
-                  公開分享 {publicWishes.length} 個案例
-                  {hasActiveFilters && `，找到 ${filteredWishes.length} 個相關經歷`}
+                  {hasActiveFilters ? (
+                    <>找到 {filteredWishes.length} / {publicWishes.length} 個相關案例</>
+                  ) : (
+                    <>公開分享 {publicWishes.length} 個案例</>
+                  )}
+                  {totalPages > 1 && (
+                    <> · 第 {currentPage}/{totalPages} 頁</>
+                  )}
                 </span>
                 <span className="sm:hidden">
-                  {publicWishes.length} 個公開案例
-                  {hasActiveFilters && ` (${filteredWishes.length})`}
+                  {hasActiveFilters ? `${filteredWishes.length}/${publicWishes.length}` : `${publicWishes.length} 個案例`}
+                  {totalPages > 1 && ` (${currentPage}/${totalPages})`}
                 </span>
               </div>
 
@@ -383,21 +577,32 @@ export default function WishesPage() {
             </div>
 
             {privateCount > 0 && (
-              <p className="text-xs md:text-sm text-slate-400 px-4">
+              <p className="text-xs md:text-sm text-slate-400 px-2 sm:px-4">
                 私密案例不會顯示在此頁面，但會納入問題洞察分析，幫助了解整體趨勢
               </p>
             )}
           </div>
 
           {/* Wishes Grid - 手機優化 */}
-          {filteredWishes.length > 0 ? (
-            <div className="grid gap-4 md:gap-6 lg:grid-cols-1">
-              {filteredWishes.map((wish) => (
-                <WishCard key={wish.id} wish={wish} />
-              ))}
-            </div>
+          {paginatedWishes.length > 0 ? (
+            <>
+              <div className="grid gap-4 md:gap-6 lg:grid-cols-1">
+                {paginatedWishes.map((wish) => (
+                  <WishCard key={wish.id} wish={wish} />
+                ))}
+              </div>
+              
+              {/* 分頁組件 */}
+              {totalPages > 1 && (
+                <PaginationComponent 
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              )}
+            </>
           ) : publicWishes.length === 0 ? (
-            <div className="text-center py-8 sm:py-12 md:py-16 px-4">
+            <div className="text-center py-8 sm:py-12 md:py-16 px-2 sm:px-4">
               <div className="mb-4 sm:mb-6">
                 <div className="relative mx-auto w-16 h-20 sm:w-20 sm:h-26 md:w-24 md:h-32">
                   <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-14 h-20 md:w-16 md:h-24 bg-gradient-to-b from-cyan-100/20 to-blue-200/30 rounded-t-xl md:rounded-t-2xl rounded-b-md md:rounded-b-lg shadow-xl shadow-cyan-500/20 backdrop-blur-sm border border-cyan-300/30 opacity-50">
@@ -409,7 +614,7 @@ export default function WishesPage() {
               <h3 className="text-base sm:text-lg md:text-xl font-semibold text-blue-100 mb-2">
                 {totalWishes > 0 ? "還沒有人公開分享經歷" : "還沒有人分享經歷"}
               </h3>
-              <p className="text-blue-300 mb-4 sm:mb-6 text-sm sm:text-base leading-relaxed px-2">
+              <p className="text-blue-300 mb-4 sm:mb-6 text-sm sm:text-base leading-relaxed px-1 sm:px-2">
                 {totalWishes > 0
                   ? `目前有 ${totalWishes} 個案例，但都選擇保持私密。成為第一個公開分享的人吧！`
                   : "成為第一個分享工作困擾的人，幫助更多人找到解決方案"}
@@ -422,10 +627,10 @@ export default function WishesPage() {
               </Link>
             </div>
           ) : (
-            <div className="text-center py-8 sm:py-12 md:py-16 px-4">
+            <div className="text-center py-8 sm:py-12 md:py-16 px-2 sm:px-4">
               <Search className="w-10 h-10 sm:w-12 sm:h-12 md:w-16 md:h-16 text-blue-400 mx-auto mb-3 sm:mb-4 opacity-50" />
               <h3 className="text-base sm:text-lg md:text-xl font-semibold text-blue-100 mb-2">沒有找到相關案例</h3>
-              <p className="text-blue-300 mb-4 md:mb-6 text-sm md:text-base">
+              <p className="text-blue-300 mb-4 md:mb-6 text-sm md:text-base px-1 sm:px-0">
                 {hasActiveFilters ? "試試調整篩選條件，或分享你的獨特經歷" : "試試其他關鍵字，或分享你的困擾"}
               </p>
               <div className="flex flex-col sm:flex-row gap-3 md:gap-4 justify-center">
