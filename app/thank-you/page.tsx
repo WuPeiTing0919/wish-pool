@@ -209,7 +209,7 @@ export default function ThankYouPage() {
       </header>
 
       {/* Main Content */}
-      <main className="py-8 md:py-16 px-2 sm:px-4">
+      <main className="py-8 md:py-16 px-1 sm:px-4">
         <div className="container mx-auto max-w-4xl">
           <div
             className={`transition-all duration-1000 ${showContent ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"}`}

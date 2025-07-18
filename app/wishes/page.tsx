@@ -420,16 +420,16 @@ export default function WishesPage() {
       </header>
 
       {/* Main Content - 手機優化 */}
-      <main className="py-8 md:py-12 px-2 sm:px-4">
+      <main className="py-8 md:py-12 px-1 sm:px-4">
         <div className="container mx-auto max-w-4xl">
           <div className="text-center mb-6 md:mb-8">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 md:mb-4">聆聽每一份真實經歷</h2>
-            <p className="text-blue-200 mb-4 md:mb-6 text-sm md:text-base px-2 sm:px-4">
+            <p className="text-blue-200 mb-4 md:mb-6 text-sm md:text-base px-1 sm:px-4">
               這裡收集了許多職場工作者願意公開分享的真實困擾和經驗
             </p>
 
             {/* Search Bar and Filter Button - 並排布局 */}
-            <div className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto px-1 sm:px-2 md:px-0 mb-4">
+            <div className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto px-0 sm:px-2 md:px-0 mb-4">
               {/* Search Input */}
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-4 h-4" />
@@ -465,7 +465,7 @@ export default function WishesPage() {
 
           {/* Category Filters */}
           {showFilters && (
-            <div className="mb-6 md:mb-8 p-3 sm:p-4 md:p-6 bg-slate-800/30 backdrop-blur-sm rounded-xl border border-slate-600/50 animate-in slide-in-from-top-2 duration-200 mx-1 sm:mx-0">
+            <div className="mb-6 md:mb-8 p-3 sm:p-4 md:p-6 bg-slate-800/30 backdrop-blur-sm rounded-xl border border-slate-600/50 animate-in slide-in-from-top-2 duration-200 mx-0 sm:mx-0">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-white flex items-center gap-2">
                   <Filter className="w-5 h-5" />

@@ -352,7 +352,7 @@ export default function AnalyticsPage() {
       </header>
 
       {/* Main Content */}
-      <main className="py-6 md:py-12 px-2 sm:px-3 md:px-4">
+      <main className="py-6 md:py-12 px-1 sm:px-3 md:px-4">
         <div className="container mx-auto max-w-7xl">
           {/* 頁面標題 - 手機優化 */}
           <div className="text-center mb-6 md:mb-12">
