@@ -1,0 +1,429 @@
+"use client"
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import {
+  MessageCircle,
+  Target,
+  Lightbulb,
+  Calendar,
+  Sparkles,
+  Clock,
+  Zap,
+  ChevronDown,
+  ChevronUp,
+  Heart,
+  Users,
+} from "lucide-react"
+import { categorizeWishMultiple, type Wish } from "@/lib/categorization"
+import { generateSolutionRecommendations, type SolutionCategory } from "@/lib/solution-recommendations"
+import { useState, useEffect } from "react"
+import { soundManager } from "@/lib/sound-effects"
+
+interface WishCardProps {
+  wish: Wish
+}
+
+export default function WishCard({ wish }: WishCardProps) {
+  const [showSolutions, setShowSolutions] = useState(false)
+  const [selectedSolution, setSelectedSolution] = useState<SolutionCategory | null>(null)
+  const [likeCount, setLikeCount] = useState(0)
+  const [hasLiked, setHasLiked] = useState(false)
+  const [isLiking, setIsLiking] = useState(false)
+
+  // 載入點讚數據
+  useEffect(() => {
+    const likes = JSON.parse(localStorage.getItem("wishLikes") || "{}")
+    const likedWishes = JSON.parse(localStorage.getItem("userLikedWishes") || "[]")
+
+    setLikeCount(likes[wish.id] || 0)
+    setHasLiked(likedWishes.includes(wish.id))
+  }, [wish.id])
+
+  const handleLike = async () => {
+    if (hasLiked || isLiking) return
+
+    setIsLiking(true)
+
+    // 播放點讚音效
+    await soundManager.play("click")
+
+    // 更新點讚數據
+    const likes = JSON.parse(localStorage.getItem("wishLikes") || "{}")
+    const likedWishes = JSON.parse(localStorage.getItem("userLikedWishes") || "[]")
+
+    likes[wish.id] = (likes[wish.id] || 0) + 1
+    likedWishes.push(wish.id)
+
+    localStorage.setItem("wishLikes", JSON.stringify(likes))
+    localStorage.setItem("userLikedWishes", JSON.stringify(likedWishes))
+
+    setLikeCount(likes[wish.id])
+    setHasLiked(true)
+
+    // 播放成功音效
+    setTimeout(async () => {
+      await soundManager.play("success")
+      setIsLiking(false)
+    }, 300)
+  }
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    return date.toLocaleDateString("zh-TW", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+  }
+
+  // 多標籤自動分類，最多3個
+  const categories = categorizeWishMultiple(wish).slice(0, 3)
+
+  // 生成解決方案建議
+  const solutionRecommendation = generateSolutionRecommendations(wish)
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case "easy":
+        return "bg-green-500/20 text-green-300 border-green-400/40"
+      case "medium":
+        return "bg-yellow-500/20 text-yellow-300 border-yellow-400/40"
+      case "hard":
+        return "bg-orange-500/20 text-orange-300 border-orange-400/40"
+      default:
+        return "bg-gray-500/20 text-gray-300 border-gray-400/40"
+    }
+  }
+
+  const getDifficultyLabel = (difficulty: string) => {
+    switch (difficulty) {
+      case "easy":
+        return "容易實現"
+      case "medium":
+        return "中等難度"
+      case "hard":
+        return "需要投入"
+      default:
+        return "未知"
+    }
+  }
+
+  return (
+    <Card className="group relative overflow-hidden bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-sm border border-slate-600/50 hover:border-cyan-400/50 shadow-2xl hover:shadow-cyan-500/20 transition-all duration-500 transform hover:scale-[1.01] mx-2 md:mx-0">
+      {/* 背景光效 */}
+      <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+
+      {/* 頂部裝飾線 */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-400"></div>
+
+      <CardHeader className="relative pb-3 md:pb-4 px-4 md:px-6 pt-4 md:pt-6">
+        <div className="flex items-start justify-between gap-3 md:gap-4 mb-3">
+          <CardTitle className="text-xl md:text-2xl font-bold text-white group-hover:text-cyan-100 transition-colors duration-300 leading-tight flex-1">
+            {wish.title}
+          </CardTitle>
+          <div className="flex items-center gap-2 shrink-0">
+            <Badge className="bg-slate-700/80 hover:bg-slate-600/80 text-slate-200 border border-slate-500/50 px-2 md:px-3 py-1 text-xs md:text-sm">
+              <Calendar className="w-3 h-3 mr-1 md:mr-1.5" />
+              <span className="hidden sm:inline">{formatDate(wish.createdAt)}</span>
+              <span className="sm:hidden">
+                {new Date(wish.createdAt).toLocaleDateString("zh-TW", { month: "short", day: "numeric" })}
+              </span>
+            </Badge>
+          </div>
+        </div>
+
+        {/* 最多3個問題領域標籤 */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {categories.map((category, index) => (
+            <Badge
+              key={`${category.name}-${index}`}
+              className={`bg-gradient-to-r ${category.bgColor} ${category.borderColor} ${category.textColor} border backdrop-blur-sm px-3 py-1.5 text-xs md:text-sm font-medium shadow-lg ${
+                index === 0 ? "ring-2 ring-white/20" : ""
+              }`}
+            >
+              <div className="w-2 h-2 rounded-full mr-2 shadow-sm" style={{ backgroundColor: category.color }}></div>
+              {category.name}
+              {index === 0 && categories.length > 1 && <span className="ml-1 text-xs opacity-75">主要</span>}
+            </Badge>
+          ))}
+        </div>
+      </CardHeader>
+
+      <CardContent className="relative space-y-4 md:space-y-5 px-4 md:px-6 pb-4 md:pb-6">
+        {/* 目前困擾 - 手機優化 */}
+        <div className="group/section relative overflow-hidden rounded-lg md:rounded-xl bg-gradient-to-r from-slate-700/60 to-slate-800/60 border border-slate-600/40 hover:border-purple-400/30 p-4 md:p-5 backdrop-blur-sm cursor-pointer transition-all duration-300 hover:transform hover:scale-[1.02] hover:shadow-lg hover:shadow-purple-500/10">
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-500/8 to-indigo-500/8 group-hover/section:from-purple-500/15 group-hover/section:to-indigo-500/15 transition-all duration-300"></div>
+
+          {/* 懸停時的光暈效果 */}
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-400/0 via-purple-400/5 to-purple-400/0 opacity-0 group-hover/section:opacity-100 transition-opacity duration-500"></div>
+
+          <div className="relative">
+            <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
+              <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-purple-400/80 to-indigo-500/80 flex items-center justify-center shadow-lg shadow-purple-500/20 group-hover/section:shadow-purple-500/30 group-hover/section:scale-110 transition-all duration-300">
+                <MessageCircle className="w-3.5 h-3.5 md:w-4 md:h-4 text-white group-hover/section:rotate-12 transition-transform duration-300" />
+              </div>
+              <h4 className="font-semibold text-purple-200 group-hover/section:text-purple-100 text-base md:text-lg transition-colors duration-300">
+                遇到的困擾
+              </h4>
+            </div>
+            <CardDescription className="text-slate-200 group-hover/section:text-slate-100 text-sm md:text-base leading-relaxed font-medium transition-colors duration-300">
+              {wish.currentPain}
+            </CardDescription>
+          </div>
+        </div>
+
+        {/* 期望解決方式 - 手機優化 */}
+        <div className="group/section relative overflow-hidden rounded-lg md:rounded-xl bg-gradient-to-r from-slate-700/60 to-slate-800/60 border border-slate-600/40 hover:border-cyan-400/30 p-4 md:p-5 backdrop-blur-sm cursor-pointer transition-all duration-300 hover:transform hover:scale-[1.02] hover:shadow-lg hover:shadow-cyan-500/10">
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/8 to-blue-500/8 group-hover/section:from-cyan-500/15 group-hover/section:to-blue-500/15 transition-all duration-300"></div>
+
+          {/* 懸停時的光暈效果 */}
+          <div className="absolute inset-0 bg-gradient-to-r from-cyan-400/0 via-cyan-400/5 to-cyan-400/0 opacity-0 group-hover/section:opacity-100 transition-opacity duration-500"></div>
+
+          <div className="relative">
+            <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
+              <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-cyan-400/80 to-blue-500/80 flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover/section:shadow-cyan-500/30 group-hover/section:scale-110 transition-all duration-300">
+                <Lightbulb className="w-3.5 h-3.5 md:w-4 md:h-4 text-white group-hover/section:rotate-12 transition-transform duration-300" />
+              </div>
+              <h4 className="font-semibold text-cyan-200 group-hover/section:text-cyan-100 text-base md:text-lg transition-colors duration-300">
+                期望的解決方式
+              </h4>
+            </div>
+            <CardDescription className="text-slate-200 group-hover/section:text-slate-100 text-sm md:text-base leading-relaxed font-medium transition-colors duration-300">
+              {wish.expectedSolution}
+            </CardDescription>
+          </div>
+        </div>
+
+        {/* 預期效果 - 手機優化 */}
+        {wish.expectedEffect && (
+          <div className="group/section relative overflow-hidden rounded-lg md:rounded-xl bg-gradient-to-r from-slate-700/60 to-slate-800/60 border border-slate-600/40 hover:border-indigo-400/30 p-4 md:p-5 backdrop-blur-sm cursor-pointer transition-all duration-300 hover:transform hover:scale-[1.02] hover:shadow-lg hover:shadow-indigo-500/10">
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/8 to-purple-500/8 group-hover/section:from-indigo-500/15 group-hover/section:to-purple-500/15 transition-all duration-300"></div>
+
+            {/* 懸停時的光暈效果 */}
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-400/0 via-indigo-400/5 to-indigo-400/0 opacity-0 group-hover/section:opacity-100 transition-opacity duration-500"></div>
+
+            <div className="relative">
+              <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-3">
+                <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-indigo-400/80 to-purple-500/80 flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover/section:shadow-indigo-500/30 group-hover/section:scale-110 transition-all duration-300">
+                  <Target className="w-3.5 h-3.5 md:w-4 md:h-4 text-white group-hover/section:rotate-12 transition-transform duration-300" />
+                </div>
+                <h4 className="font-semibold text-indigo-200 group-hover/section:text-indigo-100 text-base md:text-lg transition-colors duration-300">
+                  預期改善效果
+                </h4>
+              </div>
+              <CardDescription className="text-slate-200 group-hover/section:text-slate-100 text-sm md:text-base leading-relaxed font-medium transition-colors duration-300">
+                {wish.expectedEffect}
+              </CardDescription>
+            </div>
+          </div>
+        )}
+
+        {/* 共鳴支持區塊 - 新增 */}
+        <div className="relative overflow-hidden rounded-lg md:rounded-xl bg-gradient-to-r from-pink-800/30 to-rose-800/30 border border-pink-600/40 p-3 md:p-4 backdrop-blur-sm transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-r from-pink-500/10 to-rose-500/10"></div>
+
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Users className="w-4 h-4 text-pink-300" />
+                <span className="text-sm md:text-base text-pink-200 font-medium">
+                  {likeCount > 0 ? `${likeCount} 人也遇到相同問題` : "成為第一個表達支持的人"}
+                </span>
+              </div>
+              {likeCount > 0 && (
+                <div className="flex items-center gap-1">
+                  {[...Array(Math.min(likeCount, 5))].map((_, i) => (
+                    <Heart
+                      key={i}
+                      className="w-3 h-3 text-pink-400 animate-pulse"
+                      fill="currentColor"
+                      style={{ animationDelay: `${i * 0.2}s` }}
+                    />
+                  ))}
+                  {likeCount > 5 && <span className="text-xs text-pink-300 ml-1">+{likeCount - 5}</span>}
+                </div>
+              )}
+            </div>
+
+            <Button
+              onClick={handleLike}
+              disabled={hasLiked || isLiking}
+              size="sm"
+              className={`
+                transition-all duration-300 transform hover:scale-105 px-3 md:px-4 py-2
+                ${
+                  hasLiked
+                    ? "bg-pink-600/50 text-pink-200 border border-pink-500/50 cursor-not-allowed"
+                    : "bg-gradient-to-r from-pink-500/80 to-rose-600/80 hover:from-pink-600/90 hover:to-rose-700/90 text-white shadow-lg shadow-pink-500/25"
+                }
+                ${isLiking ? "animate-pulse" : ""}
+              `}
+            >
+              <Heart
+                className={`w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2 transition-all duration-300 ${
+                  hasLiked ? "text-pink-300" : "text-white"
+                } ${isLiking ? "animate-bounce" : ""}`}
+                fill={hasLiked ? "currentColor" : "none"}
+              />
+              <span className="text-xs md:text-sm font-medium">
+                {isLiking ? "支持中..." : hasLiked ? "已支持" : "我也是"}
+              </span>
+            </Button>
+          </div>
+
+          {hasLiked && (
+            <div className="mt-2 pt-2 border-t border-pink-600/30">
+              <p className="text-xs text-pink-300 text-center animate-in fade-in duration-500">
+                感謝你的支持！讓這個問題得到更多關注 💝
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* AI 解決方案建議區塊 - 改用藍紫色系 */}
+        {solutionRecommendation.recommendations.length > 0 && (
+          <div className="relative overflow-hidden rounded-lg md:rounded-xl bg-gradient-to-r from-indigo-800/50 to-purple-800/50 border border-indigo-500/60 p-4 md:p-5 backdrop-blur-sm transition-all duration-300 shadow-lg shadow-indigo-500/20">
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/15 to-purple-500/15"></div>
+
+            <div className="relative">
+              <div className="flex items-center justify-between mb-3 md:mb-4">
+                <div className="flex items-center gap-2 md:gap-3">
+                  <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                    <Sparkles className="w-3.5 h-3.5 md:w-4 md:h-4 text-white animate-pulse" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-white text-base md:text-lg">AI 解決方案建議</h4>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge className="bg-indigo-500/30 text-indigo-100 border border-indigo-400/50 text-xs px-2 py-0.5 font-medium">
+                        信心度 {solutionRecommendation.confidence}%
+                      </Badge>
+                      <Badge className="bg-purple-500/30 text-purple-100 border border-purple-400/50 text-xs px-2 py-0.5 font-medium">
+                        智能分析
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowSolutions(!showSolutions)}
+                  className="text-indigo-200 hover:text-white hover:bg-indigo-700/50 px-2 transition-all duration-200"
+                >
+                  {showSolutions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                </Button>
+              </div>
+
+              {/* 個人化訊息 */}
+              <div className="mb-4 p-3 bg-slate-800/60 rounded-lg border border-slate-600/50">
+                <p className="text-slate-100 text-sm md:text-base leading-relaxed whitespace-pre-line">
+                  {solutionRecommendation.personalizedMessage}
+                </p>
+              </div>
+
+              {/* 解決方案建議 */}
+              {showSolutions && (
+                <div className="space-y-3 animate-in slide-in-from-top-2 duration-300">
+                  {solutionRecommendation.recommendations.map((solution, index) => (
+                    <div
+                      key={solution.id}
+                      className="p-3 md:p-4 bg-slate-800/60 rounded-lg border border-slate-600/50 hover:bg-slate-700/60 hover:border-slate-500/70 transition-all duration-200 cursor-pointer"
+                      onClick={() => setSelectedSolution(selectedSolution?.id === solution.id ? null : solution)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="text-xl md:text-2xl">{solution.icon}</div>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <h5 className="font-semibold text-white text-sm md:text-base">{solution.name}</h5>
+                              <Badge
+                                className={`text-xs px-2 py-0.5 border ${getDifficultyColor(solution.difficulty)}`}
+                              >
+                                {getDifficultyLabel(solution.difficulty)}
+                              </Badge>
+                            </div>
+                            <p className="text-slate-300 text-xs md:text-sm">{solution.description}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-slate-400">
+                          <Clock className="w-3 h-3" />
+                          <span className="font-medium">{solution.timeframe}</span>
+                        </div>
+                      </div>
+
+                      {/* 展開的詳細資訊 */}
+                      {selectedSolution?.id === solution.id && (
+                        <div className="mt-4 pt-4 border-t border-slate-600/40 space-y-3 animate-in slide-in-from-top-1 duration-200">
+                          <div>
+                            <h6 className="text-sm font-semibold text-cyan-300 mb-2 flex items-center gap-1">
+                              ✨ 主要效益
+                            </h6>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {solution.benefits.map((benefit, idx) => (
+                                <div key={idx} className="flex items-center gap-2 text-xs text-slate-200">
+                                  <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full flex-shrink-0"></div>
+                                  {benefit}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <h6 className="text-sm font-semibold text-blue-300 mb-2 flex items-center gap-1">
+                              🛠️ 技術方案
+                            </h6>
+                            <div className="flex flex-wrap gap-1">
+                              {solution.techStack.map((tech, idx) => (
+                                <Badge
+                                  key={idx}
+                                  variant="secondary"
+                                  className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-200 border border-blue-400/30"
+                                >
+                                  {tech}
+                                </Badge>
+                              ))}
+                            </div>
+                          </div>
+
+                          <div>
+                            <h6 className="text-sm font-semibold text-yellow-300 mb-2 flex items-center gap-1">
+                              💡 應用實例
+                            </h6>
+                            <div className="space-y-1">
+                              {solution.examples.map((example, idx) => (
+                                <div key={idx} className="text-xs text-slate-200 flex items-center gap-2">
+                                  <div className="w-1 h-1 bg-yellow-400 rounded-full flex-shrink-0"></div>
+                                  {example}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {/* 專業團隊協助訊息 */}
+                  <div className="mt-4 p-3 bg-gradient-to-r from-cyan-800/40 to-blue-800/40 rounded-lg border border-cyan-500/50">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Zap className="w-4 h-4 text-cyan-300" />
+                      <span className="text-sm font-semibold text-cyan-200">專業團隊支援</span>
+                    </div>
+                    <p className="text-xs md:text-sm text-cyan-100 leading-relaxed">
+                      我們的 AI
+                      團隊和技術專家會根據這些建議，為你制定具體的實施方案。團隊將主動與你聯繫，協助你逐步改善工作流程！
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </CardContent>
+
+      {/* 底部裝飾 */}
+      <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent"></div>
+    </Card>
+  )
+}
