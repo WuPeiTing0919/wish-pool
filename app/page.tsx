@@ -1,40 +1,72 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sparkles, MessageCircle, Users, BarChart3 } from "lucide-react"
 import HeaderMusicControl from "@/components/header-music-control"
 
+interface Star {
+  id: number;
+  style: {
+    left: string;
+    top: string;
+    animationDelay: string;
+    animationDuration: string;
+  };
+}
+
 export default function HomePage() {
+  const [stars, setStars] = useState<Star[]>([]);
+  const [bigStars, setBigStars] = useState<Star[]>([]);
+
+  useEffect(() => {
+    // 生成小星星
+    setStars(
+      Array.from({ length: 30 }, (_, i) => ({
+        id: i,
+        style: {
+          left: `${Math.random() * 100}%`,
+          top: `${Math.random() * 100}%`,
+          animationDelay: `${Math.random() * 3}s`,
+          animationDuration: `${2 + Math.random() * 2}s`,
+        },
+      }))
+    );
+
+    // 生成大星星
+    setBigStars(
+      Array.from({ length: 15 }, (_, i) => ({
+        id: i,
+        style: {
+          left: `${Math.random() * 100}%`,
+          top: `${Math.random() * 100}%`,
+          animationDelay: `${Math.random() * 4}s`,
+          animationDuration: `${3 + Math.random() * 2}s`,
+        },
+      }))
+    );
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-blue-900 to-indigo-900 relative overflow-hidden flex flex-col">
       {/* 星空背景 */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         {/* 星星 */}
-        {[...Array(30)].map((_, i) => (
+        {stars.map((star) => (
           <div
-            key={i}
+            key={star.id}
             className="absolute w-0.5 h-0.5 md:w-1 md:h-1 bg-white rounded-full animate-pulse"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${2 + Math.random() * 2}s`,
-            }}
+            style={star.style}
           />
         ))}
 
         {/* 較大的星星 */}
-        {[...Array(15)].map((_, i) => (
+        {bigStars.map((star) => (
           <div
-            key={`big-${i}`}
+            key={`big-${star.id}`}
             className="absolute w-1 h-1 md:w-2 md:h-2 bg-blue-200 rounded-full animate-pulse opacity-60"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 4}s`,
-              animationDuration: `${3 + Math.random() * 2}s`,
-            }}
+            style={star.style}
           />
         ))}
 

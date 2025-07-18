@@ -11,10 +11,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Sparkles, ArrowLeft, Send, BarChart3, Eye, EyeOff, Shield, Info } from "lucide-react"
+import { Sparkles, ArrowLeft, Send, BarChart3, Eye, EyeOff, Shield, Info, Mail, ImageIcon } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { soundManager } from "@/lib/sound-effects"
 import HeaderMusicControl from "@/components/header-music-control"
+import { moderateWishForm, type ModerationResult } from "@/lib/content-moderation"
+import ContentModerationFeedback from "@/components/content-moderation-feedback"
+import ImageUpload from "@/components/image-upload"
+import type { ImageFile } from "@/lib/image-utils"
+import { WishService } from "@/lib/supabase-service"
 
 export default function SubmitPage() {
   const [formData, setFormData] = useState({
@@ -22,11 +27,15 @@ export default function SubmitPage() {
     currentPain: "",
     expectedSolution: "",
     expectedEffect: "",
-    isPublic: true, // 預設為公開
+    isPublic: true,
+    email: "",
   })
+  const [images, setImages] = useState<ImageFile[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
+  const [moderationResult, setModerationResult] = useState<ModerationResult | null>(null)
+  const [showModerationFeedback, setShowModerationFeedback] = useState(false)
 
   // 初始化音效系統
   useEffect(() => {
@@ -43,31 +52,64 @@ export default function SubmitPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // 先進行內容審核
+    const moderation = moderateWishForm(formData)
+    setModerationResult(moderation)
+
+    if (!moderation.isAppropriate) {
+      setShowModerationFeedback(true)
+      await soundManager.play("click") // 播放提示音效
+      toast({
+        title: "內容需要修改",
+        description: "請根據建議修改內容後再次提交",
+        variant: "destructive",
+      })
+      return
+    }
+
     setIsSubmitting(true)
+    setShowModerationFeedback(false)
 
     // 播放提交音效
     await soundManager.play("submit")
 
-    await new Promise((resolve) => setTimeout(resolve, 1500))
+    try {
+      // 創建困擾案例到 Supabase 數據庫
+      await WishService.createWish({
+        title: formData.title,
+        currentPain: formData.currentPain,
+        expectedSolution: formData.expectedSolution,
+        expectedEffect: formData.expectedEffect,
+        isPublic: formData.isPublic,
+        email: formData.email,
+        images: images, // 直接傳遞 ImageFile 數組
+      })
 
-    const wishes = JSON.parse(localStorage.getItem("wishes") || "[]")
-    const newWish = {
-      id: Date.now(),
-      ...formData,
-      createdAt: new Date().toISOString(),
+      // 播放成功音效
+      await soundManager.play("success")
+
+      toast({
+        title: "你的困擾已成功提交",
+        description: formData.isPublic
+          ? "正在為你準備專業的回饋，其他人也能看到你的分享..."
+          : "正在為你準備專業的回饋，你的分享將保持私密...",
+      })
+    } catch (error) {
+      console.error("提交困擾失敗:", error)
+      
+      // 播放錯誤音效
+      await soundManager.play("click")
+      
+      toast({
+        title: "提交失敗",
+        description: "請稍後再試或檢查網路連接",
+        variant: "destructive",
+      })
+      
+      setIsSubmitting(false)
+      return
     }
-    wishes.push(newWish)
-    localStorage.setItem("wishes", JSON.stringify(wishes))
-
-    // 播放成功音效
-    await soundManager.play("success")
-
-    toast({
-      title: "你的困擾已成功提交",
-      description: formData.isPublic
-        ? "正在為你準備專業的回饋，其他人也能看到你的分享..."
-        : "正在為你準備專業的回饋，你的分享將保持私密...",
-    })
 
     setFormData({
       title: "",
@@ -75,8 +117,11 @@ export default function SubmitPage() {
       expectedSolution: "",
       expectedEffect: "",
       isPublic: true,
+      email: "",
     })
+    setImages([])
     setIsSubmitting(false)
+    setModerationResult(null)
 
     // 跳轉到感謝頁面
     setTimeout(() => {
@@ -354,6 +399,70 @@ export default function SubmitPage() {
                   />
                 </div>
 
+                {/* 圖片上傳區域 */}
+                <div className="space-y-2">
+                  <Label className="text-blue-100 font-semibold text-sm md:text-base flex items-center gap-2">
+                    <ImageIcon className="w-4 h-4" />
+                    相關圖片 (可選)
+                  </Label>
+                  <div className="text-xs md:text-sm text-slate-400 mb-3">
+                    上傳與困擾相關的截圖、照片或文件圖片，幫助我們更好地理解問題
+                  </div>
+                  <ImageUpload images={images} onImagesChange={setImages} disabled={isSubmitting} />
+                </div>
+
+                {/* Email 聯絡資訊 - 可選 */}
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="email"
+                    className="text-blue-100 font-semibold text-sm md:text-base flex items-center gap-2"
+                  >
+                    <Mail className="w-4 h-4" />
+                    聯絡信箱 (可選)
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="your.email@example.com"
+                    value={formData.email}
+                    onChange={(e) => handleChange("email", e.target.value)}
+                    className="bg-slate-700/50 border-blue-600/50 text-white placeholder:text-blue-300 focus:border-cyan-400 text-sm md:text-base"
+                  />
+                  <div className="text-xs md:text-sm text-slate-400 leading-relaxed">
+                    <div className="flex items-start gap-2 mb-2">
+                      <Shield className="w-3 h-3 text-blue-400 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="font-medium text-blue-300 mb-1">完全匿名且可選</p>
+                        <ul className="space-y-1 text-slate-400">
+                          <li>• 你的身份將完全保持匿名，我們不會公開任何個人資訊</li>
+                          <li>• 提供 Email 僅用於我們主動聯繫你，提供個人化的解決方案建議</li>
+                          <li>• 如果不想被聯繫，完全可以留空，不影響困擾的提交和分析</li>
+                          <li>• 我們承諾不會將你的 Email 用於任何行銷或其他用途</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 內容審核回饋 */}
+                {showModerationFeedback && moderationResult && (
+                  <ContentModerationFeedback
+                    result={moderationResult}
+                    onRetry={() => {
+                      const newModeration = moderateWishForm(formData)
+                      setModerationResult(newModeration)
+                      if (newModeration.isAppropriate) {
+                        setShowModerationFeedback(false)
+                        toast({
+                          title: "內容檢查通過",
+                          description: "現在可以提交你的困擾了！",
+                        })
+                      }
+                    }}
+                    className="animate-in slide-in-from-top-2 duration-300"
+                  />
+                )}
+
                 {/* 隱私設定區塊 */}
                 <div className="space-y-4 p-4 md:p-5 bg-gradient-to-r from-slate-700/30 to-slate-800/30 rounded-lg border border-slate-600/50">
                   <div className="flex items-center gap-3">
@@ -391,12 +500,12 @@ export default function SubmitPage() {
                         <div className="text-xs md:text-sm text-slate-300 leading-relaxed">
                           {formData.isPublic ? (
                             <span>
-                              ✅ 你的困擾將會出現在「聆聽心聲」頁面，讓其他人看到並產生共鳴
+                              ✅ 你的困擾和圖片將會出現在「聆聽心聲」頁面，讓其他人看到並產生共鳴
                               <br />✅ 同時納入「問題洞察」分析，幫助改善整體工作環境
                             </span>
                           ) : (
                             <span>
-                              🔒 你的困擾將保持私密，不會出現在「聆聽心聲」頁面
+                              🔒 你的困擾和圖片將保持私密，不會出現在「聆聽心聲」頁面
                               <br />✅ 仍會納入「問題洞察」分析，幫助開發者和管理者了解問題趨勢
                             </span>
                           )}
@@ -413,6 +522,7 @@ export default function SubmitPage() {
                           <ul className="space-y-1 text-slate-400">
                             <li>• 無論選擇公開或私密，你的個人身份都會保持匿名</li>
                             <li>• 私密分享只用於統計分析，幫助了解整體問題狀況</li>
+                            <li>• 上傳的圖片會與文字內容一起受到相同的隱私保護</li>
                             <li>• 你可以隨時改變想法，但提交後無法修改此設定</li>
                             <li>• 所有數據都會安全保存，僅用於改善工作環境</li>
                           </ul>
@@ -437,6 +547,7 @@ export default function SubmitPage() {
                       <>
                         <Send className="w-4 h-4 mr-2" />
                         {formData.isPublic ? "公開提交困擾" : "私密提交困擾"}
+                        {images.length > 0 && <span className="ml-1 text-xs opacity-75">({images.length} 張圖片)</span>}
                       </>
                     )}
                   </Button>

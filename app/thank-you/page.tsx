@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Sparkles, Heart, Users, ArrowRight, Home, MessageCircle, BarChart3, Eye, EyeOff } from "lucide-react"
 import HeaderMusicControl from "@/components/header-music-control"
+import { WishService } from "@/lib/supabase-service"
 
 export default function ThankYouPage() {
   const [wishes, setWishes] = useState<any[]>([])
@@ -13,14 +14,47 @@ export default function ThankYouPage() {
   const [lastWishIsPublic, setLastWishIsPublic] = useState(true)
 
   useEffect(() => {
-    const savedWishes = JSON.parse(localStorage.getItem("wishes") || "[]")
-    setWishes(savedWishes)
+    const fetchWishes = async () => {
+      try {
+        // 獲取所有困擾案例
+        const allWishesData = await WishService.getAllWishes()
+        
+        // 轉換數據格式
+        const convertWish = (wish: any) => ({
+          id: wish.id,
+          title: wish.title,
+          currentPain: wish.current_pain,
+          expectedSolution: wish.expected_solution,
+          expectedEffect: wish.expected_effect || "",
+          createdAt: wish.created_at,
+          isPublic: wish.is_public,
+          email: wish.email,
+          images: wish.images,
+          like_count: wish.like_count || 0, // 包含點讚數
+        })
+        
+        const allWishes = allWishesData.map(convertWish)
+        setWishes(allWishes)
 
-    // 檢查最後一個提交的願望是否為公開
-    if (savedWishes.length > 0) {
-      const lastWish = savedWishes[savedWishes.length - 1]
-      setLastWishIsPublic(lastWish.isPublic !== false)
+        // 檢查最後一個提交的願望是否為公開
+        if (allWishes.length > 0) {
+          const lastWish = allWishes[allWishes.length - 1]
+          setLastWishIsPublic(lastWish.isPublic !== false)
+        }
+      } catch (error) {
+        console.error("獲取統計數據失敗:", error)
+        // 如果 Supabase 連接失敗，回退到 localStorage
+        const savedWishes = JSON.parse(localStorage.getItem("wishes") || "[]")
+        setWishes(savedWishes)
+
+        if (savedWishes.length > 0) {
+          const lastWish = savedWishes[savedWishes.length - 1]
+          setLastWishIsPublic(lastWish.isPublic !== false)
+        }
+      }
     }
+
+    fetchWishes()
 
     // 延遲顯示內容，創造進入效果
     setTimeout(() => setShowContent(true), 300)
@@ -250,7 +284,7 @@ export default function ThankYouPage() {
 
             {/* 統計卡片 */}
             <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 md:gap-8 mb-8 sm:mb-12 md:mb-16">
-              <Card className="bg-gradient-to-br from-pink-800/30 to-purple-800/30 backdrop-blur-sm border border-pink-600/50 shadow-2xl shadow-pink-500/20 transform hover:scale-105 transition-all duration-300">
+              <Card className="bg-gradient-to-br from-pink-900/60 to-purple-900/60 backdrop-blur-sm border border-pink-700/40 shadow-2xl shadow-pink-500/20 transform hover:scale-105 transition-all duration-300">
                 <CardContent className="p-4 sm:p-6 md:p-8 text-center">
                   <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-pink-400 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-pink-500/30">
                     <Users className="w-6 h-6 md:w-8 md:h-8 text-white" />
@@ -261,7 +295,7 @@ export default function ThankYouPage() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-cyan-800/30 to-blue-800/30 backdrop-blur-sm border border-cyan-600/50 shadow-2xl shadow-cyan-500/20 transform hover:scale-105 transition-all duration-300">
+              <Card className="bg-gradient-to-br from-cyan-900/60 to-blue-900/60 backdrop-blur-sm border border-cyan-700/40 shadow-2xl shadow-cyan-500/20 transform hover:scale-105 transition-all duration-300">
                 <CardContent className="p-4 sm:p-6 md:p-8 text-center">
                   <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-cyan-500/30">
                     <Sparkles className="w-6 h-6 md:w-8 md:h-8 text-white" />
@@ -272,7 +306,7 @@ export default function ThankYouPage() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-gradient-to-br from-purple-800/30 to-indigo-800/30 backdrop-blur-sm border border-purple-600/50 shadow-2xl shadow-purple-500/20 transform hover:scale-105 transition-all duration-300">
+              <Card className="bg-gradient-to-br from-purple-900/60 to-indigo-900/60 backdrop-blur-sm border border-purple-700/40 shadow-2xl shadow-purple-500/20 transform hover:scale-105 transition-all duration-300">
                 <CardContent className="p-4 sm:p-6 md:p-8 text-center">
                   <div className="w-12 h-12 md:w-16 md:h-16 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-purple-500/30">
                     <Heart className="w-6 h-6 md:w-8 md:h-8 text-white" fill="currentColor" />

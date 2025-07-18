@@ -9,6 +9,7 @@ import { Sparkles, ArrowLeft, Search, Plus, Filter, X, BarChart3, Eye, Users } f
 import WishCard from "@/components/wish-card"
 import HeaderMusicControl from "@/components/header-music-control"
 import { categories, categorizeWishMultiple, getCategoryStats, type Wish } from "@/lib/categorization"
+import { WishService } from "@/lib/supabase-service"
 
 export default function WishesPage() {
   const [wishes, setWishes] = useState<Wish[]>([])
@@ -22,15 +23,55 @@ export default function WishesPage() {
   const [privateCount, setPrivateCount] = useState(0)
 
   useEffect(() => {
-    const savedWishes = JSON.parse(localStorage.getItem("wishes") || "[]")
-    const publicOnly = savedWishes.filter((wish: Wish & { isPublic?: boolean }) => wish.isPublic !== false)
-    const privateOnly = savedWishes.filter((wish: Wish & { isPublic?: boolean }) => wish.isPublic === false)
+    const fetchWishes = async () => {
+      try {
+        // 獲取所有困擾（用於統計）
+        const allWishesData = await WishService.getAllWishes()
+        
+        // 獲取公開困擾（用於顯示）
+        const publicWishesData = await WishService.getPublicWishes()
+        
+        // 轉換數據格式以匹配 categorization.ts 的 Wish 接口
+        const convertWish = (wish: any) => ({
+          id: wish.id,
+          title: wish.title,
+          currentPain: wish.current_pain,
+          expectedSolution: wish.expected_solution,
+          expectedEffect: wish.expected_effect || "",
+          createdAt: wish.created_at,
+          isPublic: wish.is_public,
+          email: wish.email,
+          images: wish.images,
+          like_count: wish.like_count || 0, // 包含點讚數
+        })
+        
+        const allWishes = allWishesData.map(convertWish)
+        const publicWishes = publicWishesData.map(convertWish)
+        
+        // 計算私密困擾數量
+        const privateCount = allWishes.length - publicWishes.length
 
-    setWishes(savedWishes)
-    setPublicWishes(publicOnly.reverse())
-    setTotalWishes(savedWishes.length)
-    setPrivateCount(privateOnly.length)
-    setCategoryStats(getCategoryStats(publicOnly)) // 只統計公開的困擾
+        setWishes(allWishes)
+        setPublicWishes(publicWishes)
+        setTotalWishes(allWishes.length)
+        setPrivateCount(privateCount)
+        setCategoryStats(getCategoryStats(publicWishes))
+      } catch (error) {
+        console.error("獲取困擾數據失敗:", error)
+        // 如果 Supabase 連接失敗，回退到 localStorage
+        const savedWishes = JSON.parse(localStorage.getItem("wishes") || "[]")
+        const publicOnly = savedWishes.filter((wish: Wish & { isPublic?: boolean }) => wish.isPublic !== false)
+        const privateOnly = savedWishes.filter((wish: Wish & { isPublic?: boolean }) => wish.isPublic === false)
+
+        setWishes(savedWishes)
+        setPublicWishes(publicOnly.reverse())
+        setTotalWishes(savedWishes.length)
+        setPrivateCount(privateOnly.length)
+        setCategoryStats(getCategoryStats(publicOnly))
+      }
+    }
+
+    fetchWishes()
   }, [])
 
   useEffect(() => {

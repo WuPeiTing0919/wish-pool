@@ -20,9 +20,12 @@ import { categorizeWishMultiple, type Wish } from "@/lib/categorization"
 import { generateSolutionRecommendations, type SolutionCategory } from "@/lib/solution-recommendations"
 import { useState, useEffect } from "react"
 import { soundManager } from "@/lib/sound-effects"
+import ImageGallery from "@/components/image-gallery"
+import { restoreImageFile, type ImageFile } from "@/lib/image-utils"
+import { LikeService } from "@/lib/supabase-service"
 
 interface WishCardProps {
-  wish: Wish
+  wish: Wish & { images?: any[]; like_count?: number } // 添加圖片支援和點讚數
 }
 
 export default function WishCard({ wish }: WishCardProps) {
@@ -34,12 +37,29 @@ export default function WishCard({ wish }: WishCardProps) {
 
   // 載入點讚數據
   useEffect(() => {
-    const likes = JSON.parse(localStorage.getItem("wishLikes") || "{}")
-    const likedWishes = JSON.parse(localStorage.getItem("userLikedWishes") || "[]")
+    const loadLikeData = async () => {
+      try {
+        // 從 Supabase 獲取用戶已點讚的困擾列表
+        const userLikedWishes = await LikeService.getUserLikedWishes()
+        
+        // 設置點讚狀態
+        setHasLiked(userLikedWishes.includes(wish.id))
+        
+        // 點讚數從 wish 的 like_count 字段獲取，如果沒有則默認為 0
+        setLikeCount(wish.like_count || 0)
+      } catch (error) {
+        console.error("載入點讚數據失敗:", error)
+        // 如果 Supabase 連接失敗，回退到 localStorage
+        const likes = JSON.parse(localStorage.getItem("wishLikes") || "{}")
+        const likedWishes = JSON.parse(localStorage.getItem("userLikedWishes") || "[]")
 
-    setLikeCount(likes[wish.id] || 0)
-    setHasLiked(likedWishes.includes(wish.id))
-  }, [wish.id])
+        setLikeCount(likes[wish.id] || 0)
+        setHasLiked(likedWishes.includes(wish.id))
+      }
+    }
+
+    loadLikeData()
+  }, [wish.id, wish.like_count])
 
   const handleLike = async () => {
     if (hasLiked || isLiking) return
@@ -49,24 +69,46 @@ export default function WishCard({ wish }: WishCardProps) {
     // 播放點讚音效
     await soundManager.play("click")
 
-    // 更新點讚數據
-    const likes = JSON.parse(localStorage.getItem("wishLikes") || "{}")
-    const likedWishes = JSON.parse(localStorage.getItem("userLikedWishes") || "[]")
+    try {
+      // 使用 Supabase 點讚服務
+      const success = await LikeService.likeWish(wish.id)
+      
+      if (success) {
+        // 更新本地狀態
+        setLikeCount(prev => prev + 1)
+        setHasLiked(true)
+        
+        // 播放成功音效
+        setTimeout(async () => {
+          await soundManager.play("success")
+        }, 300)
+      } else {
+        // 已經點讚過
+        console.log("已經點讚過此困擾")
+      }
+    } catch (error) {
+      console.error("點讚失敗:", error)
+      
+      // 如果 Supabase 失敗，回退到 localStorage
+      const likes = JSON.parse(localStorage.getItem("wishLikes") || "{}")
+      const likedWishes = JSON.parse(localStorage.getItem("userLikedWishes") || "[]")
 
-    likes[wish.id] = (likes[wish.id] || 0) + 1
-    likedWishes.push(wish.id)
+      likes[wish.id] = (likes[wish.id] || 0) + 1
+      likedWishes.push(wish.id)
 
-    localStorage.setItem("wishLikes", JSON.stringify(likes))
-    localStorage.setItem("userLikedWishes", JSON.stringify(likedWishes))
+      localStorage.setItem("wishLikes", JSON.stringify(likes))
+      localStorage.setItem("userLikedWishes", JSON.stringify(likedWishes))
 
-    setLikeCount(likes[wish.id])
-    setHasLiked(true)
-
-    // 播放成功音效
-    setTimeout(async () => {
-      await soundManager.play("success")
+      setLikeCount(likes[wish.id])
+      setHasLiked(true)
+      
+      // 播放成功音效
+      setTimeout(async () => {
+        await soundManager.play("success")
+      }, 300)
+    } finally {
       setIsLiking(false)
-    }, 300)
+    }
   }
 
   const formatDate = (dateString: string) => {
@@ -83,6 +125,9 @@ export default function WishCard({ wish }: WishCardProps) {
 
   // 生成解決方案建議
   const solutionRecommendation = generateSolutionRecommendations(wish)
+
+  // 轉換圖片數據格式 - 使用 restoreImageFile 恢復圖片
+  const images: ImageFile[] = (wish.images || []).map((img) => restoreImageFile(img))
 
   const getDifficultyColor = (difficulty: string) => {
     switch (difficulty) {
@@ -216,6 +261,16 @@ export default function WishCard({ wish }: WishCardProps) {
               <CardDescription className="text-slate-200 group-hover/section:text-slate-100 text-sm md:text-base leading-relaxed font-medium transition-colors duration-300">
                 {wish.expectedEffect}
               </CardDescription>
+            </div>
+          </div>
+        )}
+
+        {/* 圖片展示區域 */}
+        {images.length > 0 && (
+          <div className="relative overflow-hidden rounded-lg md:rounded-xl bg-gradient-to-r from-slate-700/60 to-slate-800/60 border border-slate-600/40 hover:border-green-400/30 p-4 md:p-5 backdrop-blur-sm transition-all duration-300">
+            <div className="absolute inset-0 bg-gradient-to-r from-green-500/8 to-emerald-500/8"></div>
+            <div className="relative">
+              <ImageGallery images={images} />
             </div>
           </div>
         )}
