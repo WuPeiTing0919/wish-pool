@@ -371,12 +371,12 @@ export default function WishCard({ wish }: WishCardProps) {
                         variant="ghost"
                         size="sm"
                         onClick={() => setShowSolutions(!showSolutions)}
-                        className="text-indigo-200 hover:text-white hover:bg-indigo-700/50 px-2 py-1 transition-all duration-200 flex-shrink-0"
+                        className="text-indigo-200 hover:text-white hover:bg-indigo-700/50 px-1.5 sm:px-2 py-1 transition-all duration-200 flex-shrink-0"
                       >
-                        <span className="text-xs mr-1 hidden sm:inline">
+                        <span className="text-xs mr-0.5 sm:mr-1">
                           {showSolutions ? "收起" : "展開"}
                         </span>
-                        {showSolutions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                        {showSolutions ? <ChevronUp className="w-3 h-3 sm:w-4 sm:h-4" /> : <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4" />}
                       </Button>
                     </div>
                     <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
