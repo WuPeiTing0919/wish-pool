@@ -279,20 +279,31 @@ export default function WishCard({ wish }: WishCardProps) {
         <div className="relative overflow-hidden rounded-lg md:rounded-xl bg-gradient-to-r from-pink-800/30 to-rose-800/30 border border-pink-600/40 p-3 md:p-4 backdrop-blur-sm transition-all duration-300">
           <div className="absolute inset-0 bg-gradient-to-r from-pink-500/10 to-rose-500/10"></div>
 
-          <div className="relative flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-pink-300" />
-                <span className="text-sm md:text-base text-pink-200 font-medium">
-                  {likeCount > 0 ? `${likeCount} 人也遇到相同問題` : "成為第一個表達支持的人"}
+          {/* 手機端優化：改為上下布局避免擠壓 */}
+          <div className="relative">
+            {/* 第一行：支持數量和愛心顯示 */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Users className="w-4 h-4 text-pink-300 flex-shrink-0" />
+                <span className="text-sm md:text-base text-pink-200 font-medium truncate">
+                  {likeCount > 0 ? (
+                    <span className="sm:hidden">{likeCount} 人也遇到</span>
+                  ) : (
+                    <span className="sm:hidden">成為第一個支持者</span>
+                  )}
+                  <span className="hidden sm:inline">
+                    {likeCount > 0 ? `${likeCount} 人也遇到相同問題` : "成為第一個表達支持的人"}
+                  </span>
                 </span>
               </div>
+              
+              {/* 愛心動畫區域 - 手機端縮小 */}
               {likeCount > 0 && (
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
                   {[...Array(Math.min(likeCount, 5))].map((_, i) => (
                     <Heart
                       key={i}
-                      className="w-3 h-3 text-pink-400 animate-pulse"
+                      className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-pink-400 animate-pulse"
                       fill="currentColor"
                       style={{ animationDelay: `${i * 0.2}s` }}
                     />
@@ -302,30 +313,34 @@ export default function WishCard({ wish }: WishCardProps) {
               )}
             </div>
 
-            <Button
-              onClick={handleLike}
-              disabled={hasLiked || isLiking}
-              size="sm"
-              className={`
-                transition-all duration-300 transform hover:scale-105 px-3 md:px-4 py-2
-                ${
-                  hasLiked
-                    ? "bg-pink-600/50 text-pink-200 border border-pink-500/50 cursor-not-allowed"
-                    : "bg-gradient-to-r from-pink-500/80 to-rose-600/80 hover:from-pink-600/90 hover:to-rose-700/90 text-white shadow-lg shadow-pink-500/25"
-                }
-                ${isLiking ? "animate-pulse" : ""}
-              `}
-            >
-              <Heart
-                className={`w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2 transition-all duration-300 ${
-                  hasLiked ? "text-pink-300" : "text-white"
-                } ${isLiking ? "animate-bounce" : ""}`}
-                fill={hasLiked ? "currentColor" : "none"}
-              />
-              <span className="text-xs md:text-sm font-medium">
-                {isLiking ? "支持中..." : hasLiked ? "已支持" : "我也是"}
-              </span>
-            </Button>
+            {/* 第二行：按讚按鈕 - 手機端更緊湊 */}
+            <div className="flex justify-center sm:justify-end">
+              <Button
+                onClick={handleLike}
+                disabled={hasLiked || isLiking}
+                size="sm"
+                className={`
+                  transition-all duration-300 transform hover:scale-105 px-3 sm:px-4 py-2
+                  w-full sm:w-auto
+                  ${
+                    hasLiked
+                      ? "bg-pink-600/50 text-pink-200 border border-pink-500/50 cursor-not-allowed"
+                      : "bg-gradient-to-r from-pink-500/80 to-rose-600/80 hover:from-pink-600/90 hover:to-rose-700/90 text-white shadow-lg shadow-pink-500/25"
+                  }
+                  ${isLiking ? "animate-pulse" : ""}
+                `}
+              >
+                <Heart
+                  className={`w-3 h-3 md:w-4 md:h-4 mr-1.5 md:mr-2 transition-all duration-300 ${
+                    hasLiked ? "text-pink-300" : "text-white"
+                  } ${isLiking ? "animate-bounce" : ""}`}
+                  fill={hasLiked ? "currentColor" : "none"}
+                />
+                <span className="text-xs md:text-sm font-medium">
+                  {isLiking ? "支持中..." : hasLiked ? "已支持" : "我也是"}
+                </span>
+              </Button>
+            </div>
           </div>
 
           {hasLiked && (

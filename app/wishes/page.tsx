@@ -191,7 +191,7 @@ export default function WishesPage() {
   
   // 分頁相關狀態
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage] = useState(5)
+  const [itemsPerPage] = useState(3)
   const [paginatedWishes, setPaginatedWishes] = useState<Wish[]>([])
   const [totalPages, setTotalPages] = useState(0)
 
