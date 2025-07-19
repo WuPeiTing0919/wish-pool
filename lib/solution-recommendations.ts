@@ -287,6 +287,10 @@ function generatePersonalizedMessage(wish: any, solutions: SolutionCategory[], m
     "這個問題確實很常見，你不是一個人在面對",
     "感謝你願意分享這個困擾，讓我來幫你想想解決方案",
     "我仔細看了你的描述，這確實是個需要解決的問題",
+    "從你的描述中，我能感受到這個問題對你的影響",
+    "這樣的工作困擾我見過不少，很理解你的心情",
+    "你提到的這個狀況確實需要好好處理一下",
+    "看得出來這個問題已經困擾你一段時間了",
   ]
 
   const empathyPhrases = [
@@ -294,6 +298,10 @@ function generatePersonalizedMessage(wish: any, solutions: SolutionCategory[], m
     "我完全理解這種重複性工作帶來的疲憊感",
     "這種效率低下的情況確實會影響工作心情",
     "面對這樣的挑戰，任何人都會感到困擾",
+    "重複處理類似的問題確實會消耗很多精力",
+    "這類流程問題往往比表面看起來更複雜",
+    "長期面對這種狀況確實會影響工作效率",
+    "這種系統性問題需要從根本上來解決",
   ]
 
   const solutionIntros = [
@@ -308,16 +316,27 @@ function generatePersonalizedMessage(wish: any, solutions: SolutionCategory[], m
     "每個困擾都是改善的機會，你已經踏出了重要的第一步。",
     "不要氣餒，很多看似複雜的問題其實都有相對簡單的解決方案。",
     "你的這個想法很棒，讓我們一起找到最適合的解決方式吧！",
+    "通過科技和流程優化，這類問題往往能得到顯著改善。",
+    "你願意主動尋求解決方案，這本身就是很大的進步！",
+    "改善工作流程需要時間，但每一小步都值得肯定。",
+    "有了明確的改善方向，相信你很快就能看到成效。",
+    "這些建議希望能為你帶來一些新的思路和啟發。",
+    "記住，最好的解決方案往往是循序漸進地實施的。",
   ]
 
-  // 基於內容生成穩定的文案選擇，避免隨機變化
+  // 基於內容生成穩定且多樣化的文案選擇
   const fullText = `${wish.title} ${wish.currentPain} ${wish.expectedSolution} ${wish.expectedEffect}`.toLowerCase()
   const contentHash = generateContentHash(fullText)
   
-  const greeting = greetings[contentHash % greetings.length]
-  const empathy = empathyPhrases[(contentHash * 3) % empathyPhrases.length]
-  const solutionIntro = solutionIntros[(contentHash * 7) % solutionIntros.length]
-  const encouragement = encouragements[(contentHash * 11) % encouragements.length]
+  // 加入關鍵詞特徵增加多樣性
+  const keywordBonus = matchedKeywords.length * 13
+  const textLengthFactor = fullText.length % 17
+  
+  // 使用不同的分散策略確保多樣性
+  const greeting = greetings[(contentHash + keywordBonus) % greetings.length]
+  const empathy = empathyPhrases[(contentHash * 5 + textLengthFactor) % empathyPhrases.length]
+  const solutionIntro = solutionIntros[(contentHash * 13 + keywordBonus * 3) % solutionIntros.length]
+  const encouragement = encouragements[(contentHash * 19 + textLengthFactor * 7) % encouragements.length]
 
   return `${greeting}。${empathy}。\n\n${solutionIntro}\n\n${encouragement}`
 }
