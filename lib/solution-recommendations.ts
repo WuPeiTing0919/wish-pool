@@ -179,6 +179,71 @@ export const solutionCategories: SolutionCategory[] = [
   },
 ]
 
+// 基於內容生成穩定的哈希值
+function generateContentHash(text: string): number {
+  let hash = 0
+  for (let i = 0; i < text.length; i++) {
+    const char = text.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash // 轉換為32位整數
+  }
+  return Math.abs(hash)
+}
+
+// 計算信心度的改進演算法
+function calculateConfidence(
+  scoredSolutions: { solution: SolutionCategory; score: number; matchedKeywords: string[] }[],
+  fullText: string,
+  topSolutions: SolutionCategory[]
+): number {
+  if (scoredSolutions.length === 0) {
+    return 25 // 沒有匹配時，信心度很低
+  }
+
+  const bestScore = scoredSolutions[0]?.score || 0
+  const textLength = fullText.length
+  const solutionCount = scoredSolutions.length
+
+  // 基礎信心度：根據最佳匹配分數
+  let baseConfidence = Math.min(90, bestScore * 12 + 20) // 20-90% 範圍
+
+  // 修正因子
+  let confidenceModifier = 0
+
+  // 1. 文本長度修正：描述越詳細，信心度略提升
+  if (textLength > 200) {
+    confidenceModifier += 5
+  } else if (textLength < 50) {
+    confidenceModifier -= 8
+  }
+
+  // 2. 匹配解決方案數量修正
+  if (solutionCount >= 3) {
+    confidenceModifier += 8 // 多個匹配選項，信心度提升
+  } else if (solutionCount === 1) {
+    confidenceModifier -= 5 // 只有一個匹配，信心度略降
+  }
+
+  // 3. 匹配質量修正：檢查關鍵詞匹配的相關性
+  const keywordDensity = scoredSolutions[0]?.matchedKeywords.length / (fullText.split(' ').length + 1)
+  if (keywordDensity > 0.1) {
+    confidenceModifier += 6 // 關鍵詞密度高，信心度提升
+  }
+
+  // 4. 基於內容的穩定變化因子，避免隨機波動
+  const contentHash = generateContentHash(fullText)
+  const stableVariation = (contentHash % 11 - 5) * 0.8 // ±4% 穩定調整
+
+  // 最終信心度計算
+  let finalConfidence = baseConfidence + confidenceModifier + stableVariation
+
+  // 確保信心度在合理範圍內
+  finalConfidence = Math.max(20, Math.min(92, finalConfidence))
+
+  // 四捨五入到整數
+  return Math.round(finalConfidence)
+}
+
 // 智能推薦引擎
 export function generateSolutionRecommendations(wish: any): {
   recommendations: SolutionCategory[]
@@ -205,8 +270,8 @@ export function generateSolutionRecommendations(wish: any): {
   // 生成個人化訊息
   const personalizedMessage = generatePersonalizedMessage(wish, topSolutions, scoredSolutions[0]?.matchedKeywords || [])
 
-  // 計算信心度
-  const confidence = Math.min(95, Math.max(60, scoredSolutions[0]?.score * 15 || 60))
+  // 計算信心度 - 改進演算法，更貼近真實情況
+  const confidence = calculateConfidence(scoredSolutions, fullText, topSolutions)
 
   return {
     recommendations: topSolutions,
@@ -232,10 +297,10 @@ function generatePersonalizedMessage(wish: any, solutions: SolutionCategory[], m
   ]
 
   const solutionIntros = [
-    "根據你的描述，我認為以下幾個方向可能會對你有幫助：",
-    "結合你的具體情況，我建議可以考慮這些解決方案：",
-    "針對你提到的問題，我整理了幾個可行的改善方向：",
-    "基於我的經驗，這類問題通常可以透過以下方式來改善：",
+    "根據你的描述，我已經為你準備了幾個改善方向，點擊上方展開按鈕查看詳細建議：",
+    "結合你的具體情況，我整理了一些解決方案，展開即可查看完整分析：",
+    "針對你提到的問題，我準備了幾個可行的改善方向，請展開查看具體內容：",
+    "基於我的經驗，這類問題有多種改善方式，點擊展開按鈕查看詳細建議：",
   ]
 
   const encouragements = [
@@ -245,10 +310,14 @@ function generatePersonalizedMessage(wish: any, solutions: SolutionCategory[], m
     "你的這個想法很棒，讓我們一起找到最適合的解決方式吧！",
   ]
 
-  const greeting = greetings[Math.floor(Math.random() * greetings.length)]
-  const empathy = empathyPhrases[Math.floor(Math.random() * empathyPhrases.length)]
-  const solutionIntro = solutionIntros[Math.floor(Math.random() * solutionIntros.length)]
-  const encouragement = encouragements[Math.floor(Math.random() * encouragements.length)]
+  // 基於內容生成穩定的文案選擇，避免隨機變化
+  const fullText = `${wish.title} ${wish.currentPain} ${wish.expectedSolution} ${wish.expectedEffect}`.toLowerCase()
+  const contentHash = generateContentHash(fullText)
+  
+  const greeting = greetings[contentHash % greetings.length]
+  const empathy = empathyPhrases[(contentHash * 3) % empathyPhrases.length]
+  const solutionIntro = solutionIntros[(contentHash * 7) % solutionIntros.length]
+  const encouragement = encouragements[(contentHash * 11) % encouragements.length]
 
   return `${greeting}。${empathy}。\n\n${solutionIntro}\n\n${encouragement}`
 }
