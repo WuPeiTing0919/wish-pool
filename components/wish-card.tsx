@@ -373,6 +373,9 @@ export default function WishCard({ wish }: WishCardProps) {
                         onClick={() => setShowSolutions(!showSolutions)}
                         className="text-indigo-200 hover:text-white hover:bg-indigo-700/50 px-2 py-1 transition-all duration-200 flex-shrink-0"
                       >
+                        <span className="text-xs mr-1 hidden sm:inline">
+                          {showSolutions ? "收起" : "展開"}
+                        </span>
                         {showSolutions ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                       </Button>
                     </div>
