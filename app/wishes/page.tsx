@@ -466,26 +466,41 @@ export default function WishesPage() {
           {/* Category Filters */}
           {showFilters && (
             <div className="mb-6 md:mb-8 p-3 sm:p-4 md:p-6 bg-slate-800/30 backdrop-blur-sm rounded-xl border border-slate-600/50 animate-in slide-in-from-top-2 duration-200 mx-0 sm:mx-0">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-                  <Filter className="w-5 h-5" />
-                  按問題類型篩選
-                  <Badge className="bg-blue-600/20 text-blue-200 text-xs px-2 py-1">支持多標籤</Badge>
-                </h3>
-                {hasActiveFilters && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearAllFilters}
-                    className="text-blue-300 hover:text-white hover:bg-blue-800/50"
-                  >
-                    <X className="w-4 h-4 mr-1" />
-                    清除篩選
-                  </Button>
-                )}
+              {/* 手機端優化：改為上下布局避免擠壓 */}
+              <div className="mb-4">
+                {/* 第一行：標題和Badge */}
+                <div className="flex items-center gap-2 mb-2 sm:mb-0">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2 flex-1 min-w-0">
+                    <Filter className="w-5 h-5 flex-shrink-0" />
+                    <span className="truncate">按問題類型篩選</span>
+                  </h3>
+                  <Badge className="bg-blue-600/20 text-blue-200 text-xs px-2 py-1 flex-shrink-0 hidden sm:inline-flex">
+                    支持多標籤
+                  </Badge>
+                </div>
+                
+                {/* 第二行：手機端顯示Badge和清除按鈕 */}
+                <div className="flex items-center justify-between sm:justify-end">
+                  <Badge className="bg-blue-600/20 text-blue-200 text-xs px-2 py-1 sm:hidden">
+                    支持多標籤
+                  </Badge>
+                  {hasActiveFilters && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearAllFilters}
+                      className="text-blue-300 hover:text-white hover:bg-blue-800/50 flex-shrink-0"
+                    >
+                      <X className="w-4 h-4 mr-1" />
+                      <span className="hidden sm:inline">清除篩選</span>
+                      <span className="sm:hidden">清除</span>
+                    </Button>
+                  )}
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {/* 手機端優化：調整網格間距和卡片布局 */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3">
                 {categories.map((category) => {
                   const count = categoryStats[category.name] || 0
                   const isSelected = selectedCategories.includes(category.name)
@@ -496,25 +511,30 @@ export default function WishesPage() {
                       onClick={() => toggleCategory(category.name)}
                       disabled={count === 0}
                       className={`
-                        relative p-3 rounded-lg border transition-all duration-200 text-left
+                        relative p-2 sm:p-3 rounded-lg border transition-all duration-200 text-left overflow-hidden
                         ${
                           isSelected
-                            ? `bg-gradient-to-r ${category.bgColor} ${category.borderColor} ${category.textColor} border-2 shadow-lg transform scale-[1.02]`
+                            ? `bg-gradient-to-r ${category.bgColor} ${category.borderColor} ${category.textColor} border-2 shadow-lg sm:transform sm:scale-[1.02]`
                             : count > 0
-                              ? "bg-slate-700/30 border-slate-600/50 text-slate-300 hover:bg-slate-600/40 hover:border-slate-500/70 hover:scale-[1.01]"
+                              ? "bg-slate-700/30 border-slate-600/50 text-slate-300 hover:bg-slate-600/40 hover:border-slate-500/70 sm:hover:scale-[1.01]"
                               : "bg-slate-800/20 border-slate-700/30 text-slate-500 cursor-not-allowed opacity-50"
                         }
                       `}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">{category.icon}</span>
-                          <div>
-                            <div className="font-medium text-sm">{category.name}</div>
-                            <div className="text-xs opacity-75">{count} 個公開案例</div>
+                      {/* 手機端優化：改為上下布局，避免橫向擠壓 */}
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2">
+                        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                          <span className="text-base sm:text-lg flex-shrink-0">{category.icon}</span>
+                          <div className="min-w-0 flex-1">
+                            <div className="font-medium text-xs sm:text-sm truncate">{category.name}</div>
+                            <div className="text-xs opacity-75 truncate">{count} 個公開案例</div>
                           </div>
                         </div>
-                        {isSelected && <div className="w-2 h-2 rounded-full bg-current opacity-80 animate-pulse"></div>}
+                        {isSelected && (
+                          <div className="self-end sm:self-center">
+                            <div className="w-2 h-2 rounded-full bg-current opacity-80 animate-pulse flex-shrink-0"></div>
+                          </div>
+                        )}
                       </div>
                     </button>
                   )
@@ -657,3 +677,4 @@ export default function WishesPage() {
     </div>
   )
 }
+
