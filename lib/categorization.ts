@@ -56,7 +56,7 @@ export const categories = [
     icon: "📊",
   },
   {
-    name: "找不到資料",
+    name: "查找困難",
     description: "文件、SOP、規則等資訊難查找",
     keywords: [
       "找不到",

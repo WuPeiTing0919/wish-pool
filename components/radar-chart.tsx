@@ -41,7 +41,8 @@ export default function RadarChart({ data }: RadarChartProps) {
 
     const centerX = size / 2
     const centerY = size / 2
-    const radius = Math.min(centerX, centerY) - 60
+    // 调整边距到合理范围，既保证文字显示又不让图表太小
+    const radius = Math.min(centerX, centerY) - 80
 
     // 清除畫布
     ctx.clearRect(0, 0, size, size)
@@ -124,31 +125,44 @@ export default function RadarChart({ data }: RadarChartProps) {
       ctx.stroke()
     })
 
-    // 繪製標籤 - 響應式字體大小
+    // 繪製標籤 - 调整为合适的文字大小
     ctx.fillStyle = "#E2E8F0"
-    const fontSize = Math.max(10, Math.min(14, size / 30)) // 響應式字體大小
+    const fontSize = Math.max(10, Math.min(14, size / 32)) // 适当增大字体提高可读性
     ctx.font = `${fontSize}px sans-serif`
-    ctx.textAlign = "center"
 
     activeData.forEach((item, index) => {
       const angle = index * angleStep - Math.PI / 2
-      const labelRadius = radius + 30
+      // 增加标签距离确保文字不被遮住
+      const labelRadius = radius + 40
       const x = centerX + Math.cos(angle) * labelRadius
       const y = centerY + Math.sin(angle) * labelRadius
 
-      // 調整文字對齊
-      if (Math.cos(angle) < -0.1) {
+      // 更精確的文字對齊
+      const cosAngle = Math.cos(angle)
+      const sinAngle = Math.sin(angle)
+      
+      if (cosAngle < -0.3) {
         ctx.textAlign = "right"
-      } else if (Math.cos(angle) > 0.1) {
+      } else if (cosAngle > 0.3) {
         ctx.textAlign = "left"
       } else {
         ctx.textAlign = "center"
       }
 
+      // 垂直對齊調整
+      let textY = y
+      if (sinAngle < -0.3) {
+        // 上方文字，向下偏移一點
+        textY = y + fontSize / 3
+      } else if (sinAngle > 0.3) {
+        // 下方文字，向上偏移一點
+        textY = y - fontSize / 3
+      }
+
       // 繪製分類名稱
-      ctx.fillText(item.name, x, y)
-      // 繪製數量
-      ctx.fillText(`${item.count}`, x, y + fontSize + 2)
+      ctx.fillText(item.name, x, textY)
+      // 繪製數量，減少行間距
+      ctx.fillText(`${item.count}`, x, textY + fontSize + 3)
     })
   }, [data])
 
@@ -168,7 +182,7 @@ export default function RadarChart({ data }: RadarChartProps) {
   }, [])
 
   return (
-    <div className="w-full h-full flex items-center justify-center">
+    <div className="w-full h-full flex items-center justify-center p-4">
       <canvas
         ref={canvasRef}
         className="max-w-full max-h-full"

@@ -11,7 +11,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Sparkles, ArrowLeft, Send, BarChart3, Eye, EyeOff, Shield, Info, Mail, ImageIcon } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
+import { Sparkles, ArrowLeft, Send, BarChart3, Eye, EyeOff, Shield, Info, Mail, ImageIcon, Lightbulb } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { soundManager } from "@/lib/sound-effects"
 import HeaderMusicControl from "@/components/header-music-control"
@@ -20,6 +22,7 @@ import ContentModerationFeedback from "@/components/content-moderation-feedback"
 import ImageUpload from "@/components/image-upload"
 import type { ImageFile } from "@/lib/image-utils"
 import { WishService } from "@/lib/supabase-service"
+import { categorizeWish, type Wish } from "@/lib/categorization"
 
 export default function SubmitPage() {
   const [formData, setFormData] = useState({
@@ -36,6 +39,9 @@ export default function SubmitPage() {
   const router = useRouter()
   const [moderationResult, setModerationResult] = useState<ModerationResult | null>(null)
   const [showModerationFeedback, setShowModerationFeedback] = useState(false)
+  const [currentCategory, setCurrentCategory] = useState<string | null>(null)
+  const [showCategoryHint, setShowCategoryHint] = useState(false)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
 
   // 初始化音效系統
   useEffect(() => {
@@ -50,24 +56,43 @@ export default function SubmitPage() {
     initSound()
   }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  // 實時檢測分類並顯示提示
+  useEffect(() => {
+    // 只有當用戶輸入了一定內容才進行分類檢測
+    const hasMinimumContent = 
+      formData.title.trim().length > 3 || 
+      formData.currentPain.trim().length > 10
 
-    // 先進行內容審核
-    const moderation = moderateWishForm(formData)
-    setModerationResult(moderation)
+    if (hasMinimumContent) {
+      // 創建模擬的 Wish 物件進行分類
+      const mockWish: Wish = {
+        id: 0,
+        title: formData.title,
+        currentPain: formData.currentPain,
+        expectedSolution: formData.expectedSolution,
+        expectedEffect: formData.expectedEffect,
+        createdAt: new Date().toISOString()
+      }
 
-    if (!moderation.isAppropriate) {
-      setShowModerationFeedback(true)
-      await soundManager.play("click") // 播放提示音效
-      toast({
-        title: "內容需要修改",
-        description: "請根據建議修改內容後再次提交",
-        variant: "destructive",
-      })
-      return
+      const category = categorizeWish(mockWish)
+      setCurrentCategory(category.name)
+      
+      // 如果分類為"其他問題"且內容不夠詳細，顯示提示（只對公開分享）
+      const isOtherCategory = category.name === "其他問題"
+      const contentLength = 
+        formData.title.trim().length + 
+        formData.currentPain.trim().length + 
+        formData.expectedSolution.trim().length
+
+      setShowCategoryHint(isOtherCategory && contentLength < 50 && formData.isPublic)
+    } else {
+      setCurrentCategory(null)
+      setShowCategoryHint(false)
     }
+  }, [formData.title, formData.currentPain, formData.expectedSolution, formData.expectedEffect, formData.isPublic])
 
+  // 实际的提交逻辑
+  const performSubmit = async () => {
     setIsSubmitting(true)
     setShowModerationFeedback(false)
 
@@ -95,6 +120,25 @@ export default function SubmitPage() {
           ? "正在為你準備專業的回饋，其他人也能看到你的分享..."
           : "正在為你準備專業的回饋，你的分享將保持私密...",
       })
+
+      // 重置表单
+      setFormData({
+        title: "",
+        currentPain: "",
+        expectedSolution: "",
+        expectedEffect: "",
+        isPublic: true,
+        email: "",
+      })
+      setImages([])
+      setIsSubmitting(false)
+      setModerationResult(null)
+
+      // 跳轉到感謝頁面
+      setTimeout(() => {
+        router.push("/thank-you")
+      }, 1000)
+
     } catch (error) {
       console.error("提交困擾失敗:", error)
       
@@ -108,25 +152,42 @@ export default function SubmitPage() {
       })
       
       setIsSubmitting(false)
+    }
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    // 先進行內容審核
+    const moderation = moderateWishForm(formData)
+    setModerationResult(moderation)
+
+    if (!moderation.isAppropriate) {
+      setShowModerationFeedback(true)
+      await soundManager.play("click") // 播放提示音效
+      toast({
+        title: "內容需要修改",
+        description: "請根據建議修改內容後再次提交",
+        variant: "destructive",
+      })
       return
     }
 
-    setFormData({
-      title: "",
-      currentPain: "",
-      expectedSolution: "",
-      expectedEffect: "",
-      isPublic: true,
-      email: "",
-    })
-    setImages([])
-    setIsSubmitting(false)
-    setModerationResult(null)
+    // 检查是否为"其他问题"分类且内容较少，需要确认
+    if (currentCategory === "其他問題" && formData.isPublic) {
+      const contentLength = 
+        formData.title.trim().length + 
+        formData.currentPain.trim().length + 
+        formData.expectedSolution.trim().length
 
-    // 跳轉到感謝頁面
-    setTimeout(() => {
-      router.push("/thank-you")
-    }, 1000)
+      if (contentLength < 50) {
+        setShowConfirmDialog(true)
+        return
+      }
+    }
+
+    // 直接提交
+    await performSubmit()
   }
 
   const handleChange = (field: string, value: string | boolean) => {
@@ -463,6 +524,26 @@ export default function SubmitPage() {
                   />
                 )}
 
+                {/* 分類提示 - 當被歸類為其他問題時的友好提示 */}
+                {showCategoryHint && currentCategory === "其他問題" && (
+                  <Alert className="bg-yellow-900/50 border-yellow-700/50 text-yellow-200 animate-in slide-in-from-top-2 duration-300">
+                    <Lightbulb className="w-4 h-4" />
+                    <AlertDescription className="flex items-start gap-2">
+                      <span className="flex-1">
+                        為了讓管理者更好地理解和解決您的問題，建議您提供更具體的資訊：
+                        <br />• 問題發生在什麼情況下？
+                        <br />• 目前使用什麼系統或工具？
+                        <br />• 這個問題對工作造成什麼影響？
+                        <br />• 您理想中的解決方式是什麼？
+                        <br />
+                        <small className="text-yellow-300 opacity-90 mt-2 block">
+                          詳細的描述能幫助我們提供更精準的解決方案！
+                        </small>
+                      </span>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 {/* 隱私設定區塊 */}
                 <div className="space-y-4 p-4 md:p-5 bg-gradient-to-r from-slate-700/30 to-slate-800/30 rounded-lg border border-slate-600/50">
                   <div className="flex items-center gap-3">
@@ -565,6 +646,45 @@ export default function SubmitPage() {
               </form>
             </CardContent>
           </Card>
+          
+          {/* 确认对话框 */}
+          <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+            <AlertDialogContent className="bg-slate-800 border-slate-600 text-white max-w-md">
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2 text-yellow-400">
+                  <Lightbulb className="w-5 h-5" />
+                  建議補充更多資訊
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-slate-300 leading-relaxed">
+                  我們發現您的描述可能還不夠詳細。為了讓管理者更好地理解和解決您的問題，建議您補充以下資訊：
+                  <br /><br />
+                  • 問題發生在什麼情況下？<br />
+                  • 目前使用什麼系統或工具？<br />
+                  • 這個問題對工作造成什麼影響？<br />
+                  • 您理想中的解決方式是什麼？
+                  <br /><br />
+                  <span className="text-yellow-300">您現在想要補充更多資訊，還是直接提交？</span>
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="gap-2">
+                <AlertDialogCancel 
+                  className="bg-slate-700 border-slate-600 text-slate-300 hover:bg-slate-600"
+                  onClick={() => setShowConfirmDialog(false)}
+                >
+                  讓我補充資訊
+                </AlertDialogCancel>
+                <AlertDialogAction 
+                  className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700"
+                  onClick={async () => {
+                    setShowConfirmDialog(false)
+                    await performSubmit()
+                  }}
+                >
+                  直接提交
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </main>
 
