@@ -319,26 +319,9 @@ export default function AnalyticsPage() {
         : Minus
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-blue-900 to-indigo-900 relative overflow-hidden">
-      {/* 星空背景 */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {[...Array(30)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-0.5 h-0.5 md:w-1 md:h-1 bg-white rounded-full animate-pulse"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animationDelay: `${Math.random() * 3}s`,
-              animationDuration: `${2 + Math.random() * 2}s`,
-            }}
-          />
-        ))}
-        <div className="absolute top-1/4 right-1/3 w-64 h-64 md:w-96 md:h-96 bg-gradient-radial from-purple-400/20 via-blue-500/10 to-transparent rounded-full blur-3xl"></div>
-      </div>
-
-      {/* Header - 修復跑版問題 */}
-      <header className="border-b border-blue-800/50 bg-slate-900/80 backdrop-blur-sm sticky top-0 z-50">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-blue-900 to-indigo-900 text-white flex flex-col">
+      {/* Header */}
+      <header className="border-b border-blue-800/50 bg-slate-900/95 backdrop-blur-md sticky top-0 z-[9999] flex-shrink-0 shadow-lg shadow-slate-900/50">
         <div className="container mx-auto px-3 sm:px-4 py-3 md:py-4">
           <div className="flex items-center justify-between gap-2">
             {/* Logo 區域 - 防止文字換行 */}
