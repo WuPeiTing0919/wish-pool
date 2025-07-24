@@ -321,7 +321,7 @@ export default function AnalyticsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-blue-900 to-indigo-900 text-white flex flex-col">
       {/* Header */}
-      <header className="border-b border-blue-800/50 bg-slate-900/95 backdrop-blur-md sticky top-0 z-[9999] flex-shrink-0 shadow-lg shadow-slate-900/50">
+      <header className="border-b border-blue-800/50 bg-slate-900/80 backdrop-blur-md sticky top-0 z-[9999] flex-shrink-0 shadow-lg shadow-slate-900/50">
         <div className="container mx-auto px-3 sm:px-4 py-3 md:py-4">
           <div className="flex items-center justify-between gap-2">
             {/* Logo 區域 - 防止文字換行 */}
