@@ -5,11 +5,26 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Sparkles, ArrowLeft, Search, Plus, Filter, X, BarChart3, Eye, Users, ChevronLeft, ChevronRight } from "lucide-react"
+import { 
+  Sparkles, 
+  ArrowLeft, 
+  Search, 
+  Plus, 
+  Filter, 
+  X, 
+  BarChart3, 
+  Eye, 
+  Users, 
+  ChevronLeft, 
+  ChevronRight,
+  HelpCircle 
+} from "lucide-react"
 import WishCard from "@/components/wish-card"
 import HeaderMusicControl from "@/components/header-music-control"
 import { categories, categorizeWishMultiple, getCategoryStats, type Wish } from "@/lib/categorization"
 import { WishService } from "@/lib/supabase-service"
+import { driver } from "driver.js"
+import "driver.js/dist/driver.css"
 
 // 分頁組件
 interface PaginationProps {
@@ -194,6 +209,78 @@ export default function WishesPage() {
   const [itemsPerPage] = useState(3)
   const [paginatedWishes, setPaginatedWishes] = useState<Wish[]>([])
   const [totalPages, setTotalPages] = useState(0)
+
+  // 教學功能
+  const startTutorial = () => {
+    const driverObj = driver({
+      showProgress: true,
+      progressText: "步驟 {{current}} / {{total}}",
+      nextBtnText: "下一步",
+      prevBtnText: "上一步",
+      doneBtnText: "完成教學",
+      steps: [
+        {
+          element: "#wishes-title",
+          popover: {
+            title: "💬 聆聽心聲首頁",
+            description: "這裡收集了員工願意公開分享的真實困擾和經驗，讓您了解團隊面臨的挑戰，也讓員工知道他們並不孤單。",
+            side: "bottom",
+            align: "center"
+          }
+        },
+        {
+          element: "#search-section",
+          popover: {
+            title: "🔍 搜尋功能",
+            description: "在搜索框中輸入關鍵字，快速找到相似的工作困擾。支援搜尋標題、問題描述和期望解決方案。",
+            side: "bottom",
+            align: "center"
+          }
+        },
+        {
+          element: "#filter-button",
+          popover: {
+            title: "🏷️ 篩選器",
+            description: "點擊篩選按鈕可按問題類型篩選案例。支援多標籤選擇，幫助您聚焦特定領域的問題。",
+            side: "bottom",
+            align: "center"
+          }
+        },
+        {
+          element: "#stats-info",
+          popover: {
+            title: "📊 統計資訊",
+            description: "顯示公開案例數量和私密案例數量。私密案例不會在此顯示，但會用於整體分析。",
+            side: "bottom",
+            align: "center"
+          }
+        },
+        {
+          element: "#wishes-grid",
+          popover: {
+            title: "📋 案例展示",
+            description: "這裡顯示所有公開分享的困擾案例。每個案例包含問題描述、期望解決方案和分類標籤。",
+            side: "top",
+            align: "center"
+          }
+        },
+        {
+          element: "#pagination-section",
+          popover: {
+            title: "📄 分頁導覽",
+            description: "當案例較多時，使用分頁功能瀏覽所有內容。每頁顯示3個案例，避免頁面過長。",
+            side: "top",
+            align: "center"
+          }
+        }
+      ],
+      onDestroyStarted: () => {
+        driverObj.destroy();
+      },
+    });
+
+    driverObj.drive();
+  };
 
   useEffect(() => {
     const fetchWishes = async () => {
@@ -422,14 +509,14 @@ export default function WishesPage() {
       {/* Main Content - 手機優化 */}
       <main className="py-8 md:py-12 px-1 sm:px-4">
         <div className="container mx-auto max-w-4xl">
-          <div className="text-center mb-6 md:mb-8">
+          <div id="wishes-title" className="text-center mb-6 md:mb-8">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 md:mb-4">聆聽每一份真實經歷</h2>
             <p className="text-blue-200 mb-4 md:mb-6 text-sm md:text-base px-1 sm:px-4">
               這裡收集了許多職場工作者願意公開分享的真實困擾和經驗
             </p>
 
             {/* Search Bar and Filter Button - 並排布局 */}
-            <div className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto px-0 sm:px-2 md:px-0 mb-4">
+            <div id="search-section" className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto px-0 sm:px-2 md:px-0 mb-4">
               {/* Search Input */}
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 w-4 h-4" />
@@ -443,6 +530,7 @@ export default function WishesPage() {
 
               {/* Filter Button */}
               <Button
+                id="filter-button"
                 variant="outline"
                 onClick={() => setShowFilters(!showFilters)}
                 className={`
@@ -567,7 +655,7 @@ export default function WishesPage() {
           )}
 
           {/* Stats - 手機優化，增加隱私說明 */}
-          <div className="text-center mb-6 md:mb-8">
+          <div id="stats-info" className="text-center mb-6 md:mb-8">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-4">
               <div className="inline-flex items-center gap-2 bg-slate-800/50 backdrop-blur-sm rounded-full px-3 md:px-4 py-2 text-blue-200 border border-blue-700/50 text-xs md:text-sm">
                 <Eye className="w-3 h-3 md:w-4 md:h-4 text-cyan-400" />
@@ -606,7 +694,7 @@ export default function WishesPage() {
           {/* Wishes Grid - 手機優化 */}
           {paginatedWishes.length > 0 ? (
             <>
-              <div className="grid gap-4 md:gap-6 lg:grid-cols-1">
+              <div id="wishes-grid" className="grid gap-4 md:gap-6 lg:grid-cols-1">
                 {paginatedWishes.map((wish) => (
                   <WishCard key={wish.id} wish={wish} />
                 ))}
@@ -614,11 +702,13 @@ export default function WishesPage() {
               
               {/* 分頁組件 */}
               {totalPages > 1 && (
-                <PaginationComponent 
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  onPageChange={setCurrentPage}
-                />
+                <div id="pagination-section">
+                  <PaginationComponent 
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                  />
+                </div>
               )}
             </>
           ) : publicWishes.length === 0 ? (
@@ -674,6 +764,206 @@ export default function WishesPage() {
           )}
         </div>
       </main>
+
+      {/* 固定在右下角的教学按钮 */}
+      <Button
+        onClick={startTutorial}
+        className="fixed bottom-4 right-4 z-50 flex flex-col items-center gap-0.5 px-2.5 py-2 h-auto min-h-[48px] rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-lg shadow-cyan-500/25 hover:shadow-xl hover:shadow-cyan-500/30 transition-all duration-300 transform hover:scale-105 border border-cyan-400/30"
+        title="點擊開始使用教學"
+      >
+        <HelpCircle className="w-4 h-4" />
+        <span className="text-[10px] font-medium leading-tight">使用教學</span>
+      </Button>
+
+      {/* Driver.js 自定义样式 */}
+      <style jsx global>{`
+        .driver-popover {
+          background: rgba(15, 23, 42, 0.98) !important;
+          backdrop-filter: blur(16px);
+          border: 2px solid rgba(59, 130, 246, 0.6) !important;
+          border-radius: 12px !important;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(59, 130, 246, 0.2) !important;
+        }
+        
+        .driver-popover-title {
+          color: white !important;
+          font-size: 1.1rem !important;
+          font-weight: 600 !important;
+          margin-bottom: 8px !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 8px !important;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+        }
+        
+        .driver-popover-description {
+          color: rgba(226, 232, 240, 0.95) !important;
+          font-size: 0.95rem !important;
+          line-height: 1.6 !important;
+          margin-bottom: 16px !important;
+          text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3) !important;
+        }
+        
+        .driver-popover-progress-text {
+          color: rgba(147, 197, 253, 0.9) !important;
+          font-size: 0.85rem !important;
+          font-weight: 600 !important;
+          text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3) !important;
+        }
+        
+        .driver-popover-navigation-btns {
+          gap: 8px !important;
+        }
+        
+        .driver-popover-next-btn, .driver-popover-done-btn {
+          background: linear-gradient(to right, #06b6d4, #3b82f6) !important;
+          color: white !important;
+          border: 2px solid rgba(59, 130, 246, 0.3) !important;
+          padding: 10px 18px !important;
+          border-radius: 8px !important;
+          font-weight: 700 !important;
+          font-size: 0.9rem !important;
+          transition: all 0.2s ease !important;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4) !important;
+          text-shadow: none !important;
+          letter-spacing: 0.02em !important;
+          -webkit-font-smoothing: antialiased !important;
+          -moz-osx-font-smoothing: grayscale !important;
+        }
+        
+        .driver-popover-next-btn:hover, .driver-popover-done-btn:hover {
+          background: linear-gradient(to right, #0891b2, #2563eb) !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 6px 16px rgba(59, 130, 246, 0.5) !important;
+          color: white !important;
+          text-shadow: none !important;
+        }
+        
+        .driver-popover-prev-btn, .driver-popover-close-btn {
+          background: rgba(51, 65, 85, 0.95) !important;
+          color: rgba(255, 255, 255, 0.95) !important;
+          border: 2px solid rgba(71, 85, 105, 0.7) !important;
+          padding: 10px 18px !important;
+          border-radius: 8px !important;
+          font-weight: 700 !important;
+          font-size: 0.9rem !important;
+          transition: all 0.2s ease !important;
+          text-shadow: none !important;
+          letter-spacing: 0.02em !important;
+          -webkit-font-smoothing: antialiased !important;
+          -moz-osx-font-smoothing: grayscale !important;
+        }
+        
+        .driver-popover-prev-btn:hover, .driver-popover-close-btn:hover {
+          background: rgba(71, 85, 105, 0.95) !important;
+          border-color: rgba(59, 130, 246, 0.5) !important;
+          color: white !important;
+          text-shadow: none !important;
+        }
+        
+        /* 调整关闭按钮大小 */
+        .driver-popover-close-btn {
+          position: absolute !important;
+          top: 8px !important;
+          right: 8px !important;
+          width: 28px !important;
+          height: 28px !important;
+          padding: 0 !important;
+          border-radius: 6px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          font-size: 16px !important;
+          line-height: 1 !important;
+          background: rgba(71, 85, 105, 0.7) !important;
+          border: 1px solid rgba(71, 85, 105, 0.5) !important;
+          color: rgba(156, 163, 175, 0.8) !important;
+          z-index: 10 !important;
+        }
+        
+        .driver-popover-close-btn:hover {
+          background: rgba(239, 68, 68, 0.8) !important;
+          border-color: rgba(239, 68, 68, 0.6) !important;
+          color: white !important;
+          transform: none !important;
+        }
+        
+        .driver-overlay {
+          background: transparent !important;
+          backdrop-filter: none !important;
+        }
+        
+        .driver-highlighted-element {
+          box-shadow: 
+            0 0 0 2px rgba(59, 130, 246, 0.8) !important,
+            0 0 0 4px rgba(59, 130, 246, 0.3) !important;
+          border-radius: 6px !important;
+          position: relative !important;
+          z-index: 9999 !important;
+          background: transparent !important;
+        }
+        
+        .driver-highlighted-element::before {
+          content: '' !important;
+          position: absolute !important;
+          top: -3px !important;
+          left: -3px !important;
+          right: -3px !important;
+          bottom: -3px !important;
+          border: 2px solid rgba(59, 130, 246, 0.7) !important;
+          border-radius: 8px !important;
+          z-index: -1 !important;
+          background: transparent !important;
+          animation: driver-gentle-pulse 3s ease-in-out infinite !important;
+        }
+        
+        .driver-highlighted-element::after {
+          display: none !important;
+        }
+        
+        /* 确保内部内容完全不受影响 */
+        .driver-highlighted-element * {
+          position: relative !important;
+          z-index: 1 !important;
+          background: inherit !important;
+          opacity: inherit !important;
+          filter: none !important;
+          color: inherit !important;
+        }
+        
+        /* 完全移除对输入框的任何样式修改 */
+        .driver-highlighted-element input,
+        .driver-highlighted-element textarea,
+        .driver-highlighted-element label,
+        .driver-highlighted-element div,
+        .driver-highlighted-element span {
+          background: inherit !important;
+          opacity: inherit !important;
+          filter: none !important;
+          box-shadow: inherit !important;
+          color: inherit !important;
+        }
+        
+        @keyframes driver-pulse {
+          0%, 100% {
+            opacity: 0.6;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.8;
+            transform: scale(1.02);
+          }
+        }
+        
+        @keyframes driver-gentle-pulse {
+          0%, 100% {
+            border-color: rgba(59, 130, 246, 0.5);
+          }
+          50% {
+            border-color: rgba(59, 130, 246, 0.9);
+          }
+        }
+      `}</style>
     </div>
   )
 }

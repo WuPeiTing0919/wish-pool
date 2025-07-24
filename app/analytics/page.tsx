@@ -20,11 +20,14 @@ import {
   Shield,
   Eye,
   EyeOff,
+  HelpCircle,
 } from "lucide-react"
 import RadarChart from "@/components/radar-chart"
 import HeaderMusicControl from "@/components/header-music-control"
 import { categories, categorizeWishMultiple, type Wish } from "@/lib/categorization"
 import { WishService } from "@/lib/supabase-service"
+import { driver } from "driver.js"
+import "driver.js/dist/driver.css"
 
 interface CategoryData {
   name: string
@@ -65,6 +68,87 @@ export default function AnalyticsPage() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [showCategoryGuide, setShowCategoryGuide] = useState(false)
   const [showPrivacyDetails, setShowPrivacyDetails] = useState(false) // 新增：隱私說明收放狀態
+
+  // 教學功能
+  const startTutorial = () => {
+    const driverObj = driver({
+      showProgress: true,
+      progressText: "步驟 {{current}} / {{total}}",
+      nextBtnText: "下一步",
+      prevBtnText: "上一步",
+      doneBtnText: "完成教學",
+      steps: [
+        {
+          element: "#analytics-title",
+          popover: {
+            title: "🔍 洞察分析首頁",
+            description: "這裡提供職場困擾的完整數據分析，包含公開和私密案例，幫助管理者了解真實狀況並制定改善策略。",
+            side: "bottom",
+            align: "start"
+          }
+        },
+        {
+          element: "#privacy-section",
+          popover: {
+            title: "🔒 數據隱私說明",
+            description: "點擊展開查看分析數據的隱私政策。分析包含所有案例（公開+私密），但保護個人身份資訊。",
+            side: "bottom",
+            align: "center"
+          }
+        },
+        {
+          element: "#stats-overview",
+          popover: {
+            title: "📊 統計概覽",
+            description: "快速查看總案例數、本週新增、問題領域數量和成長趨勢。這些數字幫助您掌握整體狀況。",
+            side: "bottom",
+            align: "center"
+          }
+        },
+        {
+          element: "#category-guide",
+          popover: {
+            title: "📖 分類指南",
+            description: "點擊「展開」按鈕可查看各問題分類的詳細說明和關鍵字示例，了解分析系統如何歸類不同困擾。",
+            side: "top",
+            align: "center"
+          }
+        },
+        {
+          element: "#radar-chart",
+          popover: {
+            title: "🎯 問題分布圖譜",
+            description: "雷達圖直觀顯示各類問題的分布情況。面積越大表示該類問題越多，幫助識別重點改善領域。",
+            side: "left",
+            align: "center"
+          }
+        },
+        {
+          element: "#category-stats",
+          popover: {
+            title: "📈 詳細統計",
+            description: "列出所有問題分類的具體案例數和百分比，並標示TOP排名，方便優先處理高頻問題。",
+            side: "right",
+            align: "center"
+          }
+        },
+        {
+          element: "#keyword-section",
+          popover: {
+            title: "🔖 熱門關鍵字",
+            description: "顯示在所有案例中最常出現的詞彙，反映團隊面臨的核心挑戰，有助於深入理解問題本質。",
+            side: "top",
+            align: "center"
+          }
+        }
+      ],
+      onDestroyStarted: () => {
+        driverObj.destroy();
+      },
+    });
+
+    driverObj.drive();
+  };
 
   // 分析許願內容（包含所有數據，包括私密的）
   const analyzeWishes = (wishList: (Wish & { isPublic?: boolean })[]): AnalyticsData => {
@@ -355,7 +439,7 @@ export default function AnalyticsPage() {
       <main className="py-6 md:py-12 px-1 sm:px-3 md:px-4">
         <div className="container mx-auto max-w-7xl">
           {/* 頁面標題 - 手機優化 */}
-          <div className="text-center mb-6 md:mb-12">
+          <div id="analytics-title" className="text-center mb-6 md:mb-12">
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3 mb-3 md:mb-4">
               <div className="w-10 h-10 md:w-12 md:h-12 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-full flex items-center justify-center shadow-lg shadow-purple-500/25">
                 <BarChart3 className="w-5 h-5 md:w-6 md:h-6 text-white" />
@@ -370,7 +454,7 @@ export default function AnalyticsPage() {
           </div>
 
           {/* 隱私說明卡片 - 手機版可收放 */}
-          <Card className="bg-gradient-to-r from-blue-900/80 to-indigo-800/80 backdrop-blur-sm border border-blue-500/50 mb-6 md:mb-12">
+          <Card id="privacy-section" className="bg-gradient-to-r from-blue-900/80 to-indigo-800/80 backdrop-blur-sm border border-blue-500/50 mb-6 md:mb-12">
             <CardHeader className="pb-3 md:pb-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
@@ -431,7 +515,7 @@ export default function AnalyticsPage() {
           </Card>
 
           {/* 統計概覽 - 手機優化 */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-12">
+          <div id="stats-overview" className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-12">
             <Card className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/50">
               <CardContent className="p-3 md:p-6 text-center">
                 <div className="w-8 h-8 md:w-12 md:h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-2 md:mb-3">
@@ -491,7 +575,7 @@ export default function AnalyticsPage() {
           </div>
 
           {/* 分類指南 - 手機優化 */}
-          <Card className="bg-gradient-to-r from-blue-900/80 to-indigo-800/80 backdrop-blur-sm border border-blue-500/50 mb-6 md:mb-12">
+          <Card id="category-guide" className="bg-gradient-to-r from-blue-900/80 to-indigo-800/80 backdrop-blur-sm border border-blue-500/50 mb-6 md:mb-12">
             <CardHeader>
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
@@ -581,7 +665,7 @@ export default function AnalyticsPage() {
           {/* 手機版：垂直佈局，桌面版：並排佈局 */}
           <div className="space-y-6 md:space-y-0 lg:grid lg:grid-cols-2 lg:gap-8 md:gap-12">
             {/* 雷達圖 - 手機版給予更多高度 */}
-            <Card className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/50">
+            <Card id="radar-chart" className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/50">
               <CardHeader>
                 <CardTitle className="text-lg md:text-xl lg:text-2xl text-white flex items-center gap-2 md:gap-3">
                   <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-full flex items-center justify-center">
@@ -602,7 +686,7 @@ export default function AnalyticsPage() {
             </Card>
 
             {/* 分類詳細統計 */}
-            <Card className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/50">
+            <Card id="category-stats" className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/50">
               <CardHeader>
                 <CardTitle className="text-lg md:text-xl lg:text-2xl text-white flex items-center gap-2 md:gap-3">
                   <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-br from-cyan-600 to-blue-700 rounded-full flex items-center justify-center">
@@ -725,7 +809,7 @@ export default function AnalyticsPage() {
 
           {/* 熱門關鍵字 */}
           {analytics.topKeywords.length > 0 && (
-            <Card className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/50 mt-6 md:mt-12">
+            <Card id="keyword-section" className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/50 mt-6 md:mt-12">
               <CardHeader>
                 <CardTitle className="text-lg md:text-xl lg:text-2xl text-white flex items-center gap-2 md:gap-3">
                   <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
@@ -754,6 +838,206 @@ export default function AnalyticsPage() {
           )}
         </div>
       </main>
+
+      {/* 固定在右下角的教学按钮 */}
+      <Button
+        onClick={startTutorial}
+        className="fixed bottom-4 right-4 z-50 flex flex-col items-center gap-0.5 px-2.5 py-2 h-auto min-h-[48px] rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-lg shadow-cyan-500/25 hover:shadow-xl hover:shadow-cyan-500/30 transition-all duration-300 transform hover:scale-105 border border-cyan-400/30"
+        title="點擊開始使用教學"
+      >
+        <HelpCircle className="w-4 h-4" />
+        <span className="text-[10px] font-medium leading-tight">使用教學</span>
+      </Button>
+
+      {/* Driver.js 自定义样式 */}
+      <style jsx global>{`
+        .driver-popover {
+          background: rgba(15, 23, 42, 0.98) !important;
+          backdrop-filter: blur(16px);
+          border: 2px solid rgba(59, 130, 246, 0.6) !important;
+          border-radius: 12px !important;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(59, 130, 246, 0.2) !important;
+        }
+        
+        .driver-popover-title {
+          color: white !important;
+          font-size: 1.1rem !important;
+          font-weight: 600 !important;
+          margin-bottom: 8px !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 8px !important;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+        }
+        
+        .driver-popover-description {
+          color: rgba(226, 232, 240, 0.95) !important;
+          font-size: 0.95rem !important;
+          line-height: 1.6 !important;
+          margin-bottom: 16px !important;
+          text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3) !important;
+        }
+        
+        .driver-popover-progress-text {
+          color: rgba(147, 197, 253, 0.9) !important;
+          font-size: 0.85rem !important;
+          font-weight: 600 !important;
+          text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3) !important;
+        }
+        
+        .driver-popover-navigation-btns {
+          gap: 8px !important;
+        }
+        
+        .driver-popover-next-btn, .driver-popover-done-btn {
+          background: linear-gradient(to right, #06b6d4, #3b82f6) !important;
+          color: white !important;
+          border: 2px solid rgba(59, 130, 246, 0.3) !important;
+          padding: 10px 18px !important;
+          border-radius: 8px !important;
+          font-weight: 700 !important;
+          font-size: 0.9rem !important;
+          transition: all 0.2s ease !important;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4) !important;
+          text-shadow: none !important;
+          letter-spacing: 0.02em !important;
+          -webkit-font-smoothing: antialiased !important;
+          -moz-osx-font-smoothing: grayscale !important;
+        }
+        
+        .driver-popover-next-btn:hover, .driver-popover-done-btn:hover {
+          background: linear-gradient(to right, #0891b2, #2563eb) !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 6px 16px rgba(59, 130, 246, 0.5) !important;
+          color: white !important;
+          text-shadow: none !important;
+        }
+        
+        .driver-popover-prev-btn, .driver-popover-close-btn {
+          background: rgba(51, 65, 85, 0.95) !important;
+          color: rgba(255, 255, 255, 0.95) !important;
+          border: 2px solid rgba(71, 85, 105, 0.7) !important;
+          padding: 10px 18px !important;
+          border-radius: 8px !important;
+          font-weight: 700 !important;
+          font-size: 0.9rem !important;
+          transition: all 0.2s ease !important;
+          text-shadow: none !important;
+          letter-spacing: 0.02em !important;
+          -webkit-font-smoothing: antialiased !important;
+          -moz-osx-font-smoothing: grayscale !important;
+        }
+        
+        .driver-popover-prev-btn:hover, .driver-popover-close-btn:hover {
+          background: rgba(71, 85, 105, 0.95) !important;
+          border-color: rgba(59, 130, 246, 0.5) !important;
+          color: white !important;
+          text-shadow: none !important;
+        }
+        
+        /* 调整关闭按钮大小 */
+        .driver-popover-close-btn {
+          position: absolute !important;
+          top: 8px !important;
+          right: 8px !important;
+          width: 28px !important;
+          height: 28px !important;
+          padding: 0 !important;
+          border-radius: 6px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          font-size: 16px !important;
+          line-height: 1 !important;
+          background: rgba(71, 85, 105, 0.7) !important;
+          border: 1px solid rgba(71, 85, 105, 0.5) !important;
+          color: rgba(156, 163, 175, 0.8) !important;
+          z-index: 10 !important;
+        }
+        
+        .driver-popover-close-btn:hover {
+          background: rgba(239, 68, 68, 0.8) !important;
+          border-color: rgba(239, 68, 68, 0.6) !important;
+          color: white !important;
+          transform: none !important;
+        }
+        
+        .driver-overlay {
+          background: transparent !important;
+          backdrop-filter: none !important;
+        }
+        
+        .driver-highlighted-element {
+          box-shadow: 
+            0 0 0 2px rgba(59, 130, 246, 0.8) !important,
+            0 0 0 4px rgba(59, 130, 246, 0.3) !important;
+          border-radius: 6px !important;
+          position: relative !important;
+          z-index: 9999 !important;
+          background: transparent !important;
+        }
+        
+        .driver-highlighted-element::before {
+          content: '' !important;
+          position: absolute !important;
+          top: -3px !important;
+          left: -3px !important;
+          right: -3px !important;
+          bottom: -3px !important;
+          border: 2px solid rgba(59, 130, 246, 0.7) !important;
+          border-radius: 8px !important;
+          z-index: -1 !important;
+          background: transparent !important;
+          animation: driver-gentle-pulse 3s ease-in-out infinite !important;
+        }
+        
+        .driver-highlighted-element::after {
+          display: none !important;
+        }
+        
+        /* 确保内部内容完全不受影响 */
+        .driver-highlighted-element * {
+          position: relative !important;
+          z-index: 1 !important;
+          background: inherit !important;
+          opacity: inherit !important;
+          filter: none !important;
+          color: inherit !important;
+        }
+        
+        /* 完全移除对输入框的任何样式修改 */
+        .driver-highlighted-element input,
+        .driver-highlighted-element textarea,
+        .driver-highlighted-element label,
+        .driver-highlighted-element div,
+        .driver-highlighted-element span {
+          background: inherit !important;
+          opacity: inherit !important;
+          filter: none !important;
+          box-shadow: inherit !important;
+          color: inherit !important;
+        }
+        
+        @keyframes driver-pulse {
+          0%, 100% {
+            opacity: 0.6;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.8;
+            transform: scale(1.02);
+          }
+        }
+        
+        @keyframes driver-gentle-pulse {
+          0%, 100% {
+            border-color: rgba(59, 130, 246, 0.5);
+          }
+          50% {
+            border-color: rgba(59, 130, 246, 0.9);
+          }
+        }
+      `}</style>
     </div>
   )
 }

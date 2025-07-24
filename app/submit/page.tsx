@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
-import { Sparkles, ArrowLeft, Send, BarChart3, Eye, EyeOff, Shield, Info, Mail, ImageIcon, Lightbulb } from "lucide-react"
+import { Sparkles, ArrowLeft, Send, BarChart3, Eye, EyeOff, Shield, Info, Mail, ImageIcon, Lightbulb, HelpCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { soundManager } from "@/lib/sound-effects"
 import HeaderMusicControl from "@/components/header-music-control"
@@ -23,6 +23,8 @@ import ImageUpload from "@/components/image-upload"
 import type { ImageFile } from "@/lib/image-utils"
 import { WishService } from "@/lib/supabase-service"
 import { categorizeWish, type Wish } from "@/lib/categorization"
+import { driver } from "driver.js"
+import "driver.js/dist/driver.css"
 
 export default function SubmitPage() {
   const [formData, setFormData] = useState({
@@ -90,6 +92,94 @@ export default function SubmitPage() {
       setShowCategoryHint(false)
     }
   }, [formData.title, formData.currentPain, formData.expectedSolution, formData.expectedEffect, formData.isPublic])
+
+  // 教学指引配置
+  const startTutorial = () => {
+    const driverObj = driver({
+      showProgress: true,
+      progressText: "步驟 {{current}} / {{total}}",
+      nextBtnText: "下一步",
+      prevBtnText: "上一步",
+      doneBtnText: "完成教學",
+      popoverClass: "driverjs-theme",
+      steps: [
+        {
+          element: "#tutorial-welcome",
+          popover: {
+            title: "歡迎來到心願星河 ✨",
+            description: "這是一個讓您分享工作困擾並獲得專業建議的平台。讓我們一起了解如何使用吧！",
+            side: "bottom",
+            align: "center"
+          }
+        },
+        {
+          element: "#wish-title",
+          popover: {
+            title: "困擾標題 📝",
+            description: "請用簡潔的文字描述您遇到的主要問題，這樣其他人能快速了解您的困擾。",
+            side: "bottom",
+            align: "start"
+          }
+        },
+        {
+          element: "#current-pain",
+          popover: {
+            title: "具體困擾描述 📋",
+            description: "詳細說明您在工作中遇到的困難，包括具體情況、影響程度等。越詳細越能幫助管理者理解問題。",
+            side: "bottom",
+            align: "start"
+          }
+        },
+        {
+          element: "#expected-solution",
+          popover: {
+            title: "期望的解決方式 💡",
+            description: "分享您對解決這個問題的想法或建議，這有助於找到最適合的解決方案。",
+            side: "bottom",
+            align: "start"
+          }
+        },
+        {
+          element: "#expected-effect",
+          popover: {
+            title: "預期改善效果 🎯",
+            description: "描述問題解決後您期望的工作效率或環境改善，這能幫助評估解決方案的價值。",
+            side: "bottom",
+            align: "start"
+          }
+        },
+        {
+          element: "#image-upload",
+          popover: {
+            title: "相關圖片上傳 📸",
+            description: "您可以上傳與困擾相關的截圖、照片或文件圖片，視覺化的資料能幫助更好地理解問題。",
+            side: "top",
+            align: "start"
+          }
+        },
+        {
+          element: "#privacy-settings",
+          popover: {
+            title: "隱私設定 🔐",
+            description: "選擇是否公開分享您的困擾。公開分享能讓其他人看到並產生共鳴，私密分享只會用於數據分析。",
+            side: "top",
+            align: "start"
+          }
+        },
+        {
+          element: "#submit-button",
+          popover: {
+            title: "提交困擾 🚀",
+            description: "完成填寫後點擊這裡提交。系統會智能分析您的困擾類型，並為您準備專業的建議！",
+            side: "top",
+            align: "center"
+          }
+        }
+      ]
+    })
+
+    driverObj.drive()
+  }
 
   // 实际的提交逻辑
   const performSubmit = async () => {
@@ -265,7 +355,7 @@ export default function SubmitPage() {
               </div>
 
               {/* 平板版導航 */}
-              <div className="hidden sm:flex md:hidden items-center gap-1">
+              <div className="hidden sm:flex md:hidden items-center gap-2">
                 <Link href="/">
                   <Button
                     variant="ghost"
@@ -326,7 +416,7 @@ export default function SubmitPage() {
         <div className="container mx-auto max-w-2xl">
           <div className="text-center mb-8 md:mb-10">
             {/* 小許願瓶 - 添加呼吸動畫 */}
-            <div className="mb-10 md:mb-12">
+            <div className="mb-10 md:mb-12" id="tutorial-welcome">
               <div className="relative mx-auto w-16 h-22 md:w-20 md:h-28 mb-8 md:mb-10">
                 <div
                   className="absolute bottom-0 left-1/2 w-10 h-16 md:w-12 md:h-20 bg-gradient-to-b from-cyan-100/30 to-blue-200/40 rounded-t-lg md:rounded-t-xl rounded-b-md md:rounded-b-lg shadow-xl shadow-cyan-500/20 backdrop-blur-sm border border-cyan-300/30"
@@ -407,7 +497,7 @@ export default function SubmitPage() {
                     困擾標題 *
                   </Label>
                   <Input
-                    id="title"
+                    id="wish-title"
                     placeholder="簡潔描述你遇到的主要問題..."
                     value={formData.title}
                     onChange={(e) => handleChange("title", e.target.value)}
@@ -421,7 +511,7 @@ export default function SubmitPage() {
                     具體困擾描述 *
                   </Label>
                   <Textarea
-                    id="currentPain"
+                    id="current-pain"
                     placeholder="詳細說明你在工作中遇到的困難，包括具體情況、影響程度等..."
                     value={formData.currentPain}
                     onChange={(e) => handleChange("currentPain", e.target.value)}
@@ -436,7 +526,7 @@ export default function SubmitPage() {
                     期望的解決方式 *
                   </Label>
                   <Textarea
-                    id="expectedSolution"
+                    id="expected-solution"
                     placeholder="你希望這個問題能夠如何被解決？有什麼想法或建議嗎？"
                     value={formData.expectedSolution}
                     onChange={(e) => handleChange("expectedSolution", e.target.value)}
@@ -451,7 +541,7 @@ export default function SubmitPage() {
                     預期改善效果
                   </Label>
                   <Textarea
-                    id="expectedEffect"
+                    id="expected-effect"
                     placeholder="如果問題解決了，你期望工作效率或環境會有什麼具體改善？"
                     value={formData.expectedEffect}
                     onChange={(e) => handleChange("expectedEffect", e.target.value)}
@@ -461,7 +551,7 @@ export default function SubmitPage() {
                 </div>
 
                 {/* 圖片上傳區域 */}
-                <div className="space-y-2">
+                <div className="space-y-2" id="image-upload">
                   <Label className="text-blue-100 font-semibold text-sm md:text-base flex items-center gap-2">
                     <ImageIcon className="w-4 h-4" />
                     相關圖片 (可選)
@@ -545,7 +635,7 @@ export default function SubmitPage() {
                 )}
 
                 {/* 隱私設定區塊 */}
-                <div className="space-y-4 p-4 md:p-5 bg-gradient-to-r from-slate-700/30 to-slate-800/30 rounded-lg border border-slate-600/50">
+                <div className="space-y-4 p-4 md:p-5 bg-gradient-to-r from-slate-700/30 to-slate-800/30 rounded-lg border border-slate-600/50" id="privacy-settings">
                   <div className="flex items-center gap-3">
                     <div className="w-6 h-6 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full flex items-center justify-center">
                       <Shield className="w-3 h-3 text-white" />
@@ -618,6 +708,7 @@ export default function SubmitPage() {
                     type="submit"
                     disabled={isSubmitting || !formData.title || !formData.currentPain || !formData.expectedSolution}
                     className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-lg shadow-cyan-500/25 text-sm md:text-base py-2.5 md:py-3 transform hover:scale-105 transition-all"
+                    id="submit-button"
                   >
                     {isSubmitting ? (
                       <>
@@ -686,6 +777,16 @@ export default function SubmitPage() {
             </AlertDialogContent>
           </AlertDialog>
         </div>
+
+        {/* 固定在右下角的教学按钮 */}
+        <Button
+          onClick={startTutorial}
+          className="fixed bottom-4 right-4 z-50 flex flex-col items-center gap-0.5 px-2.5 py-2 h-auto min-h-[48px] rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-lg shadow-cyan-500/25 hover:shadow-xl hover:shadow-cyan-500/30 transition-all duration-300 transform hover:scale-105 border border-cyan-400/30"
+          title="點擊開始使用教學"
+        >
+          <HelpCircle className="w-4 h-4" />
+          <span className="text-[10px] font-medium leading-tight">使用教學</span>
+        </Button>
       </main>
 
       {/* 內聯 CSS 動畫定義 */}
@@ -759,11 +860,201 @@ export default function SubmitPage() {
         @keyframes sparkleGentle {
           0%, 100% {
             opacity: 0.3;
-            transform: translateY(0px) rotate(0deg);
+            transform: scale(0.9);
           }
           50% {
+            opacity: 0.7;
+            transform: scale(1.15);
+          }
+        }
+      `}</style>
+
+      {/* Driver.js 自定义样式 */}
+      <style jsx global>{`
+        .driver-popover {
+          background: rgba(15, 23, 42, 0.98) !important;
+          backdrop-filter: blur(16px);
+          border: 2px solid rgba(59, 130, 246, 0.6) !important;
+          border-radius: 12px !important;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(59, 130, 246, 0.2) !important;
+        }
+        
+        .driver-popover-title {
+          color: white !important;
+          font-size: 1.1rem !important;
+          font-weight: 600 !important;
+          margin-bottom: 8px !important;
+          display: flex !important;
+          align-items: center !important;
+          gap: 8px !important;
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
+        }
+        
+        .driver-popover-description {
+          color: rgba(226, 232, 240, 0.95) !important;
+          font-size: 0.95rem !important;
+          line-height: 1.6 !important;
+          margin-bottom: 16px !important;
+          text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3) !important;
+        }
+        
+        .driver-popover-progress-text {
+          color: rgba(147, 197, 253, 0.9) !important;
+          font-size: 0.85rem !important;
+          font-weight: 600 !important;
+          text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3) !important;
+        }
+        
+        .driver-popover-navigation-btns {
+          gap: 8px !important;
+        }
+        
+        .driver-popover-next-btn, .driver-popover-done-btn {
+          background: linear-gradient(to right, #06b6d4, #3b82f6) !important;
+          color: white !important;
+          border: 2px solid rgba(59, 130, 246, 0.3) !important;
+          padding: 10px 18px !important;
+          border-radius: 8px !important;
+          font-weight: 700 !important;
+          font-size: 0.9rem !important;
+          transition: all 0.2s ease !important;
+          box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4) !important;
+          text-shadow: none !important;
+          letter-spacing: 0.02em !important;
+          -webkit-font-smoothing: antialiased !important;
+          -moz-osx-font-smoothing: grayscale !important;
+        }
+        
+        .driver-popover-next-btn:hover, .driver-popover-done-btn:hover {
+          background: linear-gradient(to right, #0891b2, #2563eb) !important;
+          transform: translateY(-1px) !important;
+          box-shadow: 0 6px 16px rgba(59, 130, 246, 0.5) !important;
+          color: white !important;
+          text-shadow: none !important;
+        }
+        
+        .driver-popover-prev-btn, .driver-popover-close-btn {
+          background: rgba(51, 65, 85, 0.95) !important;
+          color: rgba(255, 255, 255, 0.95) !important;
+          border: 2px solid rgba(71, 85, 105, 0.7) !important;
+          padding: 10px 18px !important;
+          border-radius: 8px !important;
+          font-weight: 700 !important;
+          font-size: 0.9rem !important;
+          transition: all 0.2s ease !important;
+          text-shadow: none !important;
+          letter-spacing: 0.02em !important;
+          -webkit-font-smoothing: antialiased !important;
+          -moz-osx-font-smoothing: grayscale !important;
+        }
+        
+        .driver-popover-prev-btn:hover, .driver-popover-close-btn:hover {
+          background: rgba(71, 85, 105, 0.95) !important;
+          border-color: rgba(59, 130, 246, 0.5) !important;
+          color: white !important;
+          text-shadow: none !important;
+        }
+        
+        /* 调整关闭按钮大小 */
+        .driver-popover-close-btn {
+          position: absolute !important;
+          top: 8px !important;
+          right: 8px !important;
+          width: 28px !important;
+          height: 28px !important;
+          padding: 0 !important;
+          border-radius: 6px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          font-size: 16px !important;
+          line-height: 1 !important;
+          background: rgba(71, 85, 105, 0.7) !important;
+          border: 1px solid rgba(71, 85, 105, 0.5) !important;
+          color: rgba(156, 163, 175, 0.8) !important;
+          z-index: 10 !important;
+        }
+        
+        .driver-popover-close-btn:hover {
+          background: rgba(239, 68, 68, 0.8) !important;
+          border-color: rgba(239, 68, 68, 0.6) !important;
+          color: white !important;
+          transform: none !important;
+        }
+        
+        .driver-overlay {
+          background: transparent !important;
+          backdrop-filter: none !important;
+        }
+        
+        .driver-highlighted-element {
+          box-shadow: 
+            0 0 0 2px rgba(59, 130, 246, 0.8) !important,
+            0 0 0 4px rgba(59, 130, 246, 0.3) !important;
+          border-radius: 6px !important;
+          position: relative !important;
+          z-index: 9999 !important;
+          background: transparent !important;
+        }
+        
+        .driver-highlighted-element::before {
+          content: '' !important;
+          position: absolute !important;
+          top: -3px !important;
+          left: -3px !important;
+          right: -3px !important;
+          bottom: -3px !important;
+          border: 2px solid rgba(59, 130, 246, 0.7) !important;
+          border-radius: 8px !important;
+          z-index: -1 !important;
+          background: transparent !important;
+          animation: driver-gentle-pulse 3s ease-in-out infinite !important;
+        }
+        
+        .driver-highlighted-element::after {
+          display: none !important;
+        }
+        
+        /* 确保内部内容完全不受影响 */
+        .driver-highlighted-element * {
+          position: relative !important;
+          z-index: 1 !important;
+          background: inherit !important;
+          opacity: inherit !important;
+          filter: none !important;
+          color: inherit !important;
+        }
+        
+        /* 完全移除对输入框的任何样式修改 */
+        .driver-highlighted-element input,
+        .driver-highlighted-element textarea,
+        .driver-highlighted-element label,
+        .driver-highlighted-element div,
+        .driver-highlighted-element span {
+          background: inherit !important;
+          opacity: inherit !important;
+          filter: none !important;
+          box-shadow: inherit !important;
+          color: inherit !important;
+        }
+        
+        @keyframes driver-pulse {
+          0%, 100% {
             opacity: 0.6;
-            transform: translateY(-1px) rotate(180deg);
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.8;
+            transform: scale(1.02);
+          }
+        }
+        
+        @keyframes driver-gentle-pulse {
+          0%, 100% {
+            border-color: rgba(59, 130, 246, 0.5);
+          }
+          50% {
+            border-color: rgba(59, 130, 246, 0.9);
           }
         }
       `}</style>
