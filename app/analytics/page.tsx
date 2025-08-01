@@ -329,7 +329,7 @@ export default function AnalyticsPage() {
               <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/25">
                 <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-6 md:h-6 text-white" />
               </div>
-              <h1 className="text-base sm:text-lg md:text-2xl font-bold text-white whitespace-nowrap">強茂．心願星河</h1>
+              <h1 className="text-base sm:text-lg md:text-2xl font-bold text-white whitespace-nowrap">資訊部．心願星河</h1>
             </Link>
 
             {/* 導航區域 */}
