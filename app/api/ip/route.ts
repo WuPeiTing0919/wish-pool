@@ -8,7 +8,33 @@ export async function GET(request: NextRequest) {
   try {
     // 使用詳細的IP檢測功能
     const detailedInfo = getDetailedIpInfo(request);
-    const clientIp = detailedInfo.detectedIp;
+    let clientIp = detailedInfo.detectedIp;
+    
+    // 如果檢測到的是127.0.0.1，嘗試從請求頭獲取真實IP
+    if (clientIp === '127.0.0.1') {
+      // 檢查是否有代理轉發的真實IP
+      const forwardedFor = request.headers.get('x-forwarded-for');
+      if (forwardedFor) {
+        const ips = forwardedFor.split(',').map(ip => ip.trim());
+        for (const ip of ips) {
+          if (ip && ip !== '127.0.0.1' && ip !== '::1' && ip !== 'localhost') {
+            clientIp = ip;
+            break;
+          }
+        }
+      }
+      
+      // 檢查其他可能的IP來源
+      const realIp = request.headers.get('x-real-ip');
+      if (realIp && realIp !== '127.0.0.1') {
+        clientIp = realIp;
+      }
+      
+      const clientIpHeader = request.headers.get('x-client-ip');
+      if (clientIpHeader && clientIpHeader !== '127.0.0.1') {
+        clientIp = clientIpHeader;
+      }
+    }
     
     const allowedIps = process.env.ALLOWED_IPS || ''
     const enableIpWhitelist = process.env.ENABLE_IP_WHITELIST === 'true'
@@ -40,6 +66,8 @@ export async function GET(request: NextRequest) {
         host: request.headers.get('host'),
         referer: request.headers.get('referer'),
         userAgent: request.headers.get('user-agent'),
+        originalDetectedIp: detailedInfo.detectedIp,
+        finalDetectedIp: clientIp,
       },
       location: locationInfo,
       // 本地開發環境的特殊信息
@@ -49,7 +77,8 @@ export async function GET(request: NextRequest) {
           '在生產環境中部署後，IP檢測會更準確',
           '可以使用 ngrok 或類似工具進行外部測試',
           '檢查防火牆和網路配置',
-          '確認代理伺服器設置'
+          '確認代理伺服器設置',
+          '如果使用VPN，請檢查VPN設置'
         ]
       } : null
     })
