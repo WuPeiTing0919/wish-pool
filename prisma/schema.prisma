@@ -1,0 +1,95 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// 困擾案例主表
+model Wish {
+  id               BigInt   @id @default(autoincrement())
+  title            String   @db.VarChar(200)
+  currentPain      String   @map("current_pain") @db.Text
+  expectedSolution String   @map("expected_solution") @db.Text
+  expectedEffect   String?  @map("expected_effect") @db.Text
+  isPublic         Boolean  @default(true) @map("is_public")
+  email            String?  @db.VarChar(255)
+  images           Json     @default("[]")
+  userSession      String   @map("user_session") @db.VarChar(255)
+  status           String   @default("active") @db.VarChar(50)
+  category         String?  @db.VarChar(100)
+  priority         Int      @default(3)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // 關聯
+  likes WishLike[]
+
+  @@map("wishes")
+}
+
+// 點讚記錄表
+model WishLike {
+  id          BigInt   @id @default(autoincrement())
+  wishId      BigInt   @map("wish_id")
+  userSession String   @map("user_session") @db.VarChar(255)
+  ipAddress   String?  @map("ip_address") @db.VarChar(45)
+  userAgent   String?  @map("user_agent") @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // 關聯
+  wish Wish @relation(fields: [wishId], references: [id], onDelete: Cascade)
+
+  @@unique([wishId, userSession])
+  @@map("wish_likes")
+}
+
+// 用戶設定表
+model UserSetting {
+  id                    BigInt   @id @default(autoincrement())
+  userSession           String   @unique @map("user_session") @db.VarChar(255)
+  backgroundMusicEnabled Boolean  @default(false) @map("background_music_enabled")
+  backgroundMusicVolume Decimal  @default(0.30) @map("background_music_volume") @db.Decimal(3, 2)
+  backgroundMusicPlaying Boolean @default(false) @map("background_music_playing")
+  themePreference       String   @default("auto") @map("theme_preference") @db.VarChar(50)
+  languagePreference    String   @default("zh-TW") @map("language_preference") @db.VarChar(10)
+  notificationEnabled   Boolean  @default(true) @map("notification_enabled")
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  @@map("user_settings")
+}
+
+// 遷移記錄表
+model MigrationLog {
+  id            BigInt   @id @default(autoincrement())
+  userSession   String   @map("user_session") @db.VarChar(255)
+  migrationType String   @map("migration_type") @db.VarChar(50)
+  sourceData    Json?    @map("source_data")
+  targetRecords Int      @default(0) @map("target_records")
+  success       Boolean  @default(false)
+  errorMessage  String?  @map("error_message") @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("migration_log")
+}
+
+// 系統統計表
+model SystemStat {
+  id            BigInt   @id @default(autoincrement())
+  statDate      DateTime @unique @map("stat_date") @db.Date
+  totalWishes   Int      @default(0) @map("total_wishes")
+  publicWishes  Int      @default(0) @map("public_wishes")
+  privateWishes Int      @default(0) @map("private_wishes")
+  totalLikes    Int      @default(0) @map("total_likes")
+  activeUsers   Int      @default(0) @map("active_users")
+  storageUsedMb Decimal  @default(0) @map("storage_used_mb") @db.Decimal(10, 2)
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("system_stats")
+} 

@@ -8,7 +8,7 @@ import { Toaster } from "@/components/ui/toaster"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "強茂．心願星河 | 職場痛點 x AI 解方",
+  title: "資訊部．心願星河 | 職場痛點 x AI 解方",
   description: "每一個工作困擾都值得被理解和支持。讓我們用科技的力量，為你的職場挑戰找到專業的解決方案。",
     generator: 'v0.dev'
 }

@@ -83,7 +83,7 @@ export default function HomePage() {
               <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/25">
                 <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-6 md:h-6 text-white" />
               </div>
-              <h1 className="text-base sm:text-lg md:text-2xl font-bold text-white whitespace-nowrap">強茂．心願星河</h1>
+              <h1 className="text-base sm:text-lg md:text-2xl font-bold text-white whitespace-nowrap">資訊部．心願星河</h1>
             </div>
 
             {/* 導航區域 */}
@@ -271,7 +271,7 @@ export default function HomePage() {
             </div>
 
             <h2 className="text-4xl md:text-5xl lg:text-7xl font-bold text-white mb-4 md:mb-6 drop-shadow-2xl">
-            強茂．心願星河
+            資訊部．心願星河
             </h2>
             <p className="text-lg md:text-xl text-blue-100 mb-6 md:mb-8 leading-relaxed max-w-2xl mx-auto px-4">
               每一個工作困擾都值得被理解和支持
@@ -313,7 +313,7 @@ export default function HomePage() {
             <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/25">
               <Sparkles className="w-3 h-3 md:w-5 md:h-5 text-white" />
             </div>
-            <span className="text-lg md:text-xl font-semibold text-white">強茂．心願星河</span>
+            <span className="text-lg md:text-xl font-semibold text-white">資訊部．心願星河</span>
           </div>
           <p className="text-sm md:text-base text-blue-200">理解每一份職場困擾，用科技創造更好的工作環境</p>
         </div>
