@@ -5,6 +5,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Sparkles, MessageCircle, Users, BarChart3 } from "lucide-react"
 import HeaderMusicControl from "@/components/header-music-control"
+import IpDisplay from "@/components/ip-display"
 
 interface Star {
   id: number;
@@ -88,6 +89,11 @@ export default function HomePage() {
 
             {/* 導航區域 */}
             <nav className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0">
+              {/* IP顯示 */}
+              <div className="hidden sm:block">
+                <IpDisplay />
+              </div>
+              
               {/* 音樂控制 */}
               <div className="hidden sm:block">
                 <HeaderMusicControl />
@@ -148,6 +154,11 @@ export default function HomePage() {
 
               {/* 手機版導航 - 使用文字而非圖標 */}
               <div className="flex sm:hidden items-center gap-1">
+                {/* 手機版IP顯示 */}
+                <div className="sm:hidden">
+                  <IpDisplay mobileSimplified />
+                </div>
+                
                 <Link href="/analytics">
                   <Button
                     variant="ghost"
