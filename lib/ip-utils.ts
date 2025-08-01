@@ -66,6 +66,11 @@ function cleanIpAddress(ip: string): string | null {
     ip = ip.substring(7);
   }
   
+  // 處理純IPv6本地回環地址
+  if (ip === '::1') {
+    return '127.0.0.1';
+  }
+  
   // 驗證IP格式
   if (!isValidIp(ip)) {
     return null;
@@ -245,6 +250,24 @@ export function getDetailedIpInfo(req: any): {
       });
     }
   });
+
+  // 如果沒有找到任何IP，檢查是否有IPv6格式的地址
+  if (allFoundIps.length === 0) {
+    Object.values(ipSources).forEach(ipSource => {
+      if (ipSource) {
+        const ipList = ipSource.toString().split(',').map(ip => ip.trim());
+        ipList.forEach(ip => {
+          // 直接處理IPv6格式的IPv4地址
+          if (ip.startsWith('::ffff:')) {
+            const cleanIp = ip.substring(7);
+            if (isValidIp(cleanIp) && !allFoundIps.includes(cleanIp)) {
+              allFoundIps.push(cleanIp);
+            }
+          }
+        });
+      }
+    });
+  }
 
   // 選擇最佳IP
   for (const ip of allFoundIps) {

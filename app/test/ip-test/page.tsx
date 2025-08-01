@@ -186,6 +186,10 @@ ALLOWED_IPS=你的真實IP地址,其他允許的IP`}
           <Globe className="w-4 h-4 mr-2" />
           詳細IP調試
         </Button>
+        <Button variant="outline" onClick={() => window.open('/test/ip-format-test', '_blank')}>
+          <CheckCircle className="w-4 h-4 mr-2" />
+          IPv4格式測試
+        </Button>
         <Button variant="outline" onClick={() => window.open('/api/ip', '_blank')}>
           <ExternalLink className="w-4 h-4 mr-2" />
           IP API 端點

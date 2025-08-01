@@ -10,6 +10,43 @@ export async function GET(request: NextRequest) {
     const detailedInfo = getDetailedIpInfo(request);
     let clientIp = detailedInfo.detectedIp;
     
+    // 確保返回IPv4格式的地址
+    function ensureIPv4Format(ip: string): string {
+      if (!ip) return '127.0.0.1';
+      
+      // 移除空白字符
+      ip = ip.trim();
+      
+      // 處理IPv6格式的IPv4地址
+      if (ip.startsWith('::ffff:')) {
+        return ip.substring(7);
+      }
+      
+      // 處理純IPv6本地回環地址
+      if (ip === '::1') {
+        return '127.0.0.1';
+      }
+      
+      // 驗證是否為有效的IPv4地址
+      const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+      if (ipv4Regex.test(ip)) {
+        return ip;
+      }
+      
+      // 如果不是有效的IPv4，返回默認值
+      return '127.0.0.1';
+    }
+
+    // 檢查是否為IPv6格式的IPv4地址
+    function isIPv6MappedIPv4(ip: string): boolean {
+      return ip.startsWith('::ffff:');
+    }
+
+    // 獲取IPv6格式的IPv4地址
+    function getIPv6MappedFormat(ipv4: string): string {
+      return `::ffff:${ipv4}`;
+    }
+    
     // 如果檢測到的是127.0.0.1，嘗試從請求頭獲取真實IP
     if (clientIp === '127.0.0.1') {
       // 檢查是否有代理轉發的真實IP
@@ -17,8 +54,13 @@ export async function GET(request: NextRequest) {
       if (forwardedFor) {
         const ips = forwardedFor.split(',').map(ip => ip.trim());
         for (const ip of ips) {
-          if (ip && ip !== '127.0.0.1' && ip !== '::1' && ip !== 'localhost') {
-            clientIp = ip;
+          // 處理IPv6格式的IPv4地址
+          let cleanIp = ip;
+          if (ip.startsWith('::ffff:')) {
+            cleanIp = ip.substring(7);
+          }
+          if (cleanIp && cleanIp !== '127.0.0.1' && cleanIp !== '::1' && cleanIp !== 'localhost') {
+            clientIp = cleanIp;
             break;
           }
         }
@@ -26,13 +68,25 @@ export async function GET(request: NextRequest) {
       
       // 檢查其他可能的IP來源
       const realIp = request.headers.get('x-real-ip');
-      if (realIp && realIp !== '127.0.0.1') {
-        clientIp = realIp;
+      if (realIp) {
+        let cleanRealIp = realIp;
+        if (realIp.startsWith('::ffff:')) {
+          cleanRealIp = realIp.substring(7);
+        }
+        if (cleanRealIp !== '127.0.0.1') {
+          clientIp = cleanRealIp;
+        }
       }
       
       const clientIpHeader = request.headers.get('x-client-ip');
-      if (clientIpHeader && clientIpHeader !== '127.0.0.1') {
-        clientIp = clientIpHeader;
+      if (clientIpHeader) {
+        let cleanClientIp = clientIpHeader;
+        if (clientIpHeader.startsWith('::ffff:')) {
+          cleanClientIp = clientIpHeader.substring(7);
+        }
+        if (cleanClientIp !== '127.0.0.1') {
+          clientIp = cleanClientIp;
+        }
       }
     }
     
@@ -51,12 +105,24 @@ export async function GET(request: NextRequest) {
       }
     }
     
+    // 確保最終返回的IP是IPv4格式
+    const finalIp = ensureIPv4Format(clientIp);
+    const originalIp = detailedInfo.detectedIp;
+    const isIPv6Mapped = isIPv6MappedIPv4(originalIp);
+    const ipv6Format = getIPv6MappedFormat(finalIp);
+    
     return NextResponse.json({
-      ip: clientIp,
+      ip: finalIp,
       isAllowed,
       enableIpWhitelist,
       allowedIps: enableIpWhitelist ? allowedIps.split(',').map(ip => ip.trim()) : [],
       timestamp: new Date().toISOString(),
+      ipv6Info: {
+        isIPv6Mapped,
+        originalFormat: originalIp,
+        ipv6Format,
+        hasIPv6Support: true
+      },
       debug: {
         allIpSources: detailedInfo.ipSources,
         allFoundIps: detailedInfo.allFoundIps,
@@ -67,7 +133,9 @@ export async function GET(request: NextRequest) {
         referer: request.headers.get('referer'),
         userAgent: request.headers.get('user-agent'),
         originalDetectedIp: detailedInfo.detectedIp,
-        finalDetectedIp: clientIp,
+        finalDetectedIp: finalIp,
+        rawDetectedIp: clientIp, // 保留原始檢測到的IP用於調試
+        ipDetectionMethod: isIPv6Mapped ? 'IPv6-Mapped-IPv4' : 'Standard-IPv4'
       },
       location: locationInfo,
       // 本地開發環境的特殊信息
