@@ -1086,7 +1086,7 @@ export default function AdminPage() {
 
       {/* 詳細資訊對話框 */}
       <Dialog open={showWishDetails} onOpenChange={setShowWishDetails}>
-        <DialogContent className="w-[95vw] max-w-6xl h-[95vh] bg-slate-800 border-slate-700 flex flex-col p-0 z-[60]">
+        <DialogContent className="w-[95vw] max-w-6xl h-[85vh] bg-slate-800 border-slate-700 flex flex-col p-0 z-[99999] mt-16 mb-8">
           <DialogHeader className="px-6 py-4 border-b border-slate-600/50 flex-shrink-0">
             <DialogTitle className="text-white flex items-center gap-2">
               <Eye className="w-5 h-5 text-cyan-400" />
@@ -1415,7 +1415,7 @@ export default function AdminPage() {
 
       {/* 圖片放大對話框 */}
       <Dialog open={showImageModal} onOpenChange={setShowImageModal}>
-        <DialogContent className="max-w-[95vw] max-h-[95vh] bg-black border-slate-700 p-0 overflow-hidden">
+        <DialogContent className="max-w-[95vw] max-h-[85vh] bg-black border-slate-700 p-0 overflow-hidden z-[100000] mt-16 mb-8">
           <DialogHeader className="px-6 py-4 border-b border-slate-600/50 flex-shrink-0">
             <DialogTitle className="text-white flex items-center gap-2">
               <ImageIcon className="w-5 h-5 text-purple-400" />
