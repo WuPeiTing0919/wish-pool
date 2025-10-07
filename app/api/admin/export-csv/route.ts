@@ -29,27 +29,55 @@ export async function POST(request: NextRequest) {
     const csvRows = [headers.join(',')]
     
     data.forEach((wish: any) => {
+      // 清理和轉義 CSV 數據
+      const cleanText = (text: string) => {
+        if (!text) return ''
+        return text
+          .replace(/"/g, '""')  // 轉義雙引號
+          .replace(/\r?\n/g, ' ')  // 將換行符替換為空格
+          .replace(/\t/g, ' ')  // 將製表符替換為空格
+          .trim()
+      }
+      
       const row = [
         wish.id,
-        `"${wish.title.replace(/"/g, '""')}"`,
-        `"${wish.current_pain.replace(/"/g, '""')}"`,
-        `"${wish.expected_solution.replace(/"/g, '""')}"`,
-        `"${(wish.expected_effect || '').replace(/"/g, '""')}"`,
+        `"${cleanText(wish.title)}"`,
+        `"${cleanText(wish.current_pain)}"`,
+        `"${cleanText(wish.expected_solution)}"`,
+        `"${cleanText(wish.expected_effect || '')}"`,
         wish.is_public ? '是' : '否',
-        `"${(wish.email || '').replace(/"/g, '""')}"`,
+        `"${cleanText(wish.email || '')}"`,
         wish.status === 'active' ? '活躍' : '非活躍',
-        `"${(wish.category || '未分類').replace(/"/g, '""')}"`,
+        `"${cleanText(wish.category || '未分類')}"`,
         wish.priority,
         wish.like_count,
-        `"${new Date(wish.created_at).toLocaleString('zh-TW')}"`,
-        `"${new Date(wish.updated_at).toLocaleString('zh-TW')}"`,
-        `"${wish.user_session.replace(/"/g, '""')}"`
+        `"${new Date(wish.created_at).toLocaleString('zh-TW', { 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        })}"`,
+        `"${new Date(wish.updated_at).toLocaleString('zh-TW', { 
+          year: 'numeric', 
+          month: '2-digit', 
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        })}"`,
+        `"${cleanText(wish.user_session)}"`
       ]
       csvRows.push(row.join(','))
     })
     
     const csvContent = csvRows.join('\n')
-    const csvBuffer = Buffer.from(csvContent, 'utf-8')
+    // 添加 UTF-8 BOM 以確保 Excel 正確識別中文編碼
+    const csvBuffer = Buffer.concat([
+      Buffer.from('\uFEFF', 'utf8'), // UTF-8 BOM
+      Buffer.from(csvContent, 'utf-8')
+    ])
     
     console.log(`✅ 成功生成 CSV 文件: ${data.length} 筆數據`)
     

@@ -103,6 +103,7 @@ export default function AdminPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [visibilityFilter, setVisibilityFilter] = useState("all")
   const [isExporting, setIsExporting] = useState(false)
+  const [isExportingExcel, setIsExportingExcel] = useState(false)
   const [showCategoryGuide, setShowCategoryGuide] = useState(false)
   const [showPrivacyDetails, setShowPrivacyDetails] = useState(false)
   
@@ -427,6 +428,43 @@ export default function AdminPage() {
     }
   }
 
+  // 匯出 Excel
+  const exportToExcel = async () => {
+    try {
+      setIsExportingExcel(true)
+      
+      const response = await fetch('/api/admin/export-excel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          data: filteredWishes,
+          filename: `困擾案例數據_${new Date().toISOString().split('T')[0]}.xlsx`
+        })
+      })
+
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `困擾案例數據_${new Date().toISOString().split('T')[0]}.xlsx`
+        document.body.appendChild(a)
+        a.click()
+        window.URL.revokeObjectURL(url)
+        document.body.removeChild(a)
+      } else {
+        throw new Error('匯出失敗')
+      }
+    } catch (error) {
+      console.error('匯出 Excel 失敗:', error)
+      alert('匯出失敗，請稍後再試')
+    } finally {
+      setIsExportingExcel(false)
+    }
+  }
+
   useEffect(() => {
     fetchData()
   }, [])
@@ -575,7 +613,7 @@ export default function AdminPage() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                     <div className="relative">
                       <Search className="absolute left-3 top-3 h-4 w-4 text-blue-400" />
                       <Input
@@ -619,6 +657,19 @@ export default function AdminPage() {
                         <Download className="w-4 h-4 mr-2" />
                       )}
                       匯出 CSV
+                    </Button>
+
+                    <Button 
+                      onClick={exportToExcel} 
+                      disabled={isExportingExcel}
+                      className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/25"
+                    >
+                      {isExportingExcel ? (
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4 mr-2" />
+                      )}
+                      匯出 Excel
                     </Button>
                   </div>
                 </CardContent>
