@@ -21,7 +21,7 @@ import { moderateWishForm, type ModerationResult } from "@/lib/content-moderatio
 import ContentModerationFeedback from "@/components/content-moderation-feedback"
 import ImageUpload from "@/components/image-upload"
 import type { ImageFile } from "@/lib/image-utils"
-import { WishService } from "@/lib/supabase-service"
+// 使用 API 路由，不需要直接導入 WishService
 import { categorizeWish, type Wish } from "@/lib/categorization"
 import { driver } from "driver.js"
 import "driver.js/dist/driver.css"
@@ -190,8 +190,13 @@ export default function SubmitPage() {
     await soundManager.play("submit")
 
     try {
-      // 創建困擾案例到 Supabase 數據庫
-      await WishService.createWish({
+      // 使用 API 路由創建困擾案例
+      const response = await fetch('/api/wishes/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
         title: formData.title,
         currentPain: formData.currentPain,
         expectedSolution: formData.expectedSolution,
@@ -199,7 +204,18 @@ export default function SubmitPage() {
         isPublic: formData.isPublic,
         email: formData.email,
         images: images, // 直接傳遞 ImageFile 數組
+        })
       })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to create wish')
+      }
+
+      const result = await response.json()
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create wish')
+      }
 
       // 播放成功音效
       await soundManager.play("success")

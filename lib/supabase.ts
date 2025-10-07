@@ -1,18 +1,19 @@
 import { createClient } from "@supabase/supabase-js"
 
 // Supabase 配置
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 // 創建 Supabase 客戶端（單例模式）
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// 只有在有 Supabase 環境變數時才創建客戶端
+export const supabase = supabaseUrl && supabaseAnonKey ? createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: false, // 我們不需要用戶認證
   },
   db: {
     schema: "public",
   },
-})
+}) : null
 
 // 數據庫類型定義
 export interface Database {
@@ -136,6 +137,11 @@ export function getUserSession(): string {
 // 測試 Supabase 連接
 export async function testSupabaseConnection(): Promise<boolean> {
   try {
+    if (!supabase) {
+      console.log("ℹ️ Supabase 未配置，使用 MySQL 資料庫")
+      return false
+    }
+
     const { data, error } = await supabase.from("wishes").select("count").limit(1)
 
     if (error) {

@@ -25,7 +25,7 @@ import {
 import RadarChart from "@/components/radar-chart"
 import HeaderMusicControl from "@/components/header-music-control"
 import { categories, categorizeWishMultiple, type Wish } from "@/lib/categorization"
-import { WishService } from "@/lib/supabase-service"
+// 使用 API 路由，不需要直接導入 WishService
 import { driver } from "driver.js"
 import "driver.js/dist/driver.css"
 
@@ -269,8 +269,15 @@ export default function AnalyticsPage() {
   useEffect(() => {
     const fetchWishes = async () => {
       try {
-        // 獲取所有困擾案例（包含私密的，用於完整分析）
-        const allWishesData = await WishService.getAllWishes()
+        // 使用 API 路由獲取所有困擾案例（包含私密的，用於完整分析）
+        const response = await fetch('/api/wishes/real-json?type=all')
+        const result = await response.json()
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to fetch wishes')
+        }
+        
+        const allWishesData = result.data
         
         // 轉換數據格式以匹配 categorization.ts 的 Wish 接口
         const convertWish = (wish: any) => ({
@@ -292,7 +299,7 @@ export default function AnalyticsPage() {
         setAnalytics(analyzeWishes(allWishes))
       } catch (error) {
         console.error("獲取分析數據失敗:", error)
-        // 如果 Supabase 連接失敗，回退到 localStorage
+        // 如果 API 連接失敗，回退到 localStorage
         const savedWishes = JSON.parse(localStorage.getItem("wishes") || "[]")
         setWishes(savedWishes)
         setAnalytics(analyzeWishes(savedWishes))

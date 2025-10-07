@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Sparkles, Heart, Users, ArrowRight, Home, MessageCircle, BarChart3, Eye, EyeOff } from "lucide-react"
 import HeaderMusicControl from "@/components/header-music-control"
-import { WishService } from "@/lib/supabase-service"
+// 使用 API 路由，不需要直接導入 WishService
 
 export default function ThankYouPage() {
   const [wishes, setWishes] = useState<any[]>([])
@@ -16,8 +16,15 @@ export default function ThankYouPage() {
   useEffect(() => {
     const fetchWishes = async () => {
       try {
-        // 獲取所有困擾案例
-        const allWishesData = await WishService.getAllWishes()
+        // 使用 API 路由獲取所有困擾案例
+        const response = await fetch('/api/wishes/real-json?type=all')
+        const result = await response.json()
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to fetch wishes')
+        }
+        
+        const allWishesData = result.data
         
         // 轉換數據格式
         const convertWish = (wish: any) => ({

@@ -26,6 +26,10 @@ export class WishService {
   // 獲取所有公開的困擾案例（帶點讚數）
   static async getPublicWishes(): Promise<Wish[]> {
     try {
+      if (!supabase) {
+        throw new SupabaseError("Supabase 未配置，請使用統一的資料庫服務")
+      }
+
       const { data, error } = await supabase
         .from("wishes_with_likes")
         .select("*")
@@ -43,6 +47,10 @@ export class WishService {
   // 獲取所有困擾案例（用於分析，包含私密的）
   static async getAllWishes(): Promise<Wish[]> {
     try {
+      if (!supabase) {
+        throw new SupabaseError("Supabase 未配置，請使用統一的資料庫服務")
+      }
+
       const { data, error } = await supabase
         .from("wishes_with_likes")
         .select("*")

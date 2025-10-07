@@ -22,7 +22,7 @@ import { useState, useEffect } from "react"
 import { soundManager } from "@/lib/sound-effects"
 import ImageGallery from "@/components/image-gallery"
 import { restoreImageFile, type ImageFile } from "@/lib/image-utils"
-import { LikeService } from "@/lib/supabase-service"
+// 使用 API 路由，不需要直接導入 LikeService
 
 interface WishCardProps {
   wish: Wish & { images?: any[]; like_count?: number } // 添加圖片支援和點讚數
@@ -35,21 +35,43 @@ export default function WishCard({ wish }: WishCardProps) {
   const [hasLiked, setHasLiked] = useState(false)
   const [isLiking, setIsLiking] = useState(false)
 
+  // 獲取或創建用戶會話 ID
+  const getUserSession = (): string => {
+    if (typeof window === 'undefined') return ''
+    
+    let userSession = localStorage.getItem('user_session')
+    if (!userSession) {
+      userSession = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+      localStorage.setItem('user_session', userSession)
+    }
+    return userSession
+  }
+
   // 載入點讚數據
   useEffect(() => {
     const loadLikeData = async () => {
       try {
-        // 從 Supabase 獲取用戶已點讚的困擾列表
-        const userLikedWishes = await LikeService.getUserLikedWishes()
+        const userSession = getUserSession()
+        // 使用 API 路由獲取用戶已點讚的困擾列表
+        const response = await fetch(`/api/wishes/like?wishId=${wish.id}`, {
+          headers: {
+            'x-user-session': userSession
+          }
+        })
+        const result = await response.json()
         
-        // 設置點讚狀態
-        setHasLiked(userLikedWishes.includes(wish.id))
+        if (result.success) {
+          // 設置點讚狀態
+          setHasLiked(result.data.liked)
+        } else {
+          throw new Error(result.error || 'Failed to check like status')
+        }
         
         // 點讚數從 wish 的 like_count 字段獲取，如果沒有則默認為 0
         setLikeCount(wish.like_count || 0)
       } catch (error) {
         console.error("載入點讚數據失敗:", error)
-        // 如果 Supabase 連接失敗，回退到 localStorage
+        // 如果 API 連接失敗，回退到 localStorage
         const likes = JSON.parse(localStorage.getItem("wishLikes") || "{}")
         const likedWishes = JSON.parse(localStorage.getItem("userLikedWishes") || "[]")
 
@@ -70,10 +92,20 @@ export default function WishCard({ wish }: WishCardProps) {
     await soundManager.play("click")
 
     try {
-      // 使用 Supabase 點讚服務
-      const success = await LikeService.likeWish(wish.id)
+      const userSession = getUserSession()
+      // 使用 API 路由點讚服務
+      const response = await fetch('/api/wishes/like', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-session': userSession
+        },
+        body: JSON.stringify({ wishId: wish.id })
+      })
       
-      if (success) {
+      const result = await response.json()
+      
+      if (result.success && result.data.liked) {
         // 更新本地狀態
         setLikeCount(prev => prev + 1)
         setHasLiked(true)

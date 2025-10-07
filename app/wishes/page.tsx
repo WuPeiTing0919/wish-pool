@@ -17,12 +17,13 @@ import {
   Users, 
   ChevronLeft, 
   ChevronRight,
-  HelpCircle 
+  HelpCircle,
+  RefreshCw
 } from "lucide-react"
 import WishCard from "@/components/wish-card"
 import HeaderMusicControl from "@/components/header-music-control"
 import { categories, categorizeWishMultiple, getCategoryStats, type Wish } from "@/lib/categorization"
-import { WishService } from "@/lib/supabase-service"
+// 使用 API 路由，不需要直接導入 WishService
 import { driver } from "driver.js"
 import "driver.js/dist/driver.css"
 
@@ -203,6 +204,7 @@ export default function WishesPage() {
   const [showFilters, setShowFilters] = useState(false)
   const [totalWishes, setTotalWishes] = useState(0)
   const [privateCount, setPrivateCount] = useState(0)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   
   // 分頁相關狀態
   const [currentPage, setCurrentPage] = useState(1)
@@ -282,55 +284,79 @@ export default function WishesPage() {
     driverObj.drive();
   };
 
-  useEffect(() => {
-    const fetchWishes = async () => {
-      try {
-        // 獲取所有困擾（用於統計）
-        const allWishesData = await WishService.getAllWishes()
-        
-        // 獲取公開困擾（用於顯示）
-        const publicWishesData = await WishService.getPublicWishes()
-        
-        // 轉換數據格式以匹配 categorization.ts 的 Wish 接口
-        const convertWish = (wish: any) => ({
-          id: wish.id,
-          title: wish.title,
-          currentPain: wish.current_pain,
-          expectedSolution: wish.expected_solution,
-          expectedEffect: wish.expected_effect || "",
-          createdAt: wish.created_at,
-          isPublic: wish.is_public,
-          email: wish.email,
-          images: wish.images,
-          like_count: wish.like_count || 0, // 包含點讚數
-        })
-        
-        const allWishes = allWishesData.map(convertWish)
-        const publicWishes = publicWishesData.map(convertWish)
-        
-        // 計算私密困擾數量
-        const privateCount = allWishes.length - publicWishes.length
+  // 獲取困擾數據的函數
+  const fetchWishes = async () => {
+    try {
+      // 使用 API 路由獲取所有困擾（用於統計）
+      const allResponse = await fetch('/api/wishes/real-json?type=all')
+      const allResult = await allResponse.json()
+      if (!allResult.success) throw new Error(allResult.error || 'Failed to fetch all wishes')
+      const allWishesData = allResult.data
+      
+      // 使用 API 路由獲取公開困擾（用於顯示）
+      const publicResponse = await fetch('/api/wishes/real-json?type=public')
+      const publicResult = await publicResponse.json()
+      if (!publicResult.success) throw new Error(publicResult.error || 'Failed to fetch public wishes')
+      const publicWishesData = publicResult.data
+      
+      // 轉換數據格式以匹配 categorization.ts 的 Wish 接口
+      const convertWish = (wish: any) => ({
+        id: wish.id,
+        title: wish.title,
+        currentPain: wish.current_pain,
+        expectedSolution: wish.expected_solution,
+        expectedEffect: wish.expected_effect || "",
+        createdAt: wish.created_at,
+        isPublic: wish.is_public,
+        email: wish.email,
+        images: wish.images,
+        like_count: wish.like_count || 0, // 包含點讚數
+      })
+      
+      const allWishes = allWishesData.map(convertWish)
+      const publicWishes = publicWishesData.map(convertWish)
+      
+      // 按照 created_at 日期降序排序（最新的在前面）
+      const sortedPublicWishes = publicWishes.sort((a, b) => {
+        const dateA = new Date(a.createdAt)
+        const dateB = new Date(b.createdAt)
+        return dateB.getTime() - dateA.getTime() // 降序排序
+      })
+      
+      // 計算私密困擾數量
+      const privateCount = allWishes.length - publicWishes.length
 
-        setWishes(allWishes)
-        setPublicWishes(publicWishes)
-        setTotalWishes(allWishes.length)
-        setPrivateCount(privateCount)
-        setCategoryStats(getCategoryStats(publicWishes))
-      } catch (error) {
-        console.error("獲取困擾數據失敗:", error)
-        // 如果 Supabase 連接失敗，回退到 localStorage
-        const savedWishes = JSON.parse(localStorage.getItem("wishes") || "[]")
-        const publicOnly = savedWishes.filter((wish: Wish & { isPublic?: boolean }) => wish.isPublic !== false)
-        const privateOnly = savedWishes.filter((wish: Wish & { isPublic?: boolean }) => wish.isPublic === false)
+      setWishes(allWishes)
+      setPublicWishes(sortedPublicWishes)
+      setTotalWishes(allWishes.length)
+      setPrivateCount(privateCount)
+      setCategoryStats(getCategoryStats(publicWishes))
+    } catch (error) {
+      console.error("獲取困擾數據失敗:", error)
+      // 如果 API 連接失敗，回退到 localStorage
+      const savedWishes = JSON.parse(localStorage.getItem("wishes") || "[]")
+      const publicOnly = savedWishes.filter((wish: Wish & { isPublic?: boolean }) => wish.isPublic !== false)
+      const privateOnly = savedWishes.filter((wish: Wish & { isPublic?: boolean }) => wish.isPublic === false)
 
-        setWishes(savedWishes)
-        setPublicWishes(publicOnly.reverse())
-        setTotalWishes(savedWishes.length)
-        setPrivateCount(privateOnly.length)
-        setCategoryStats(getCategoryStats(publicOnly))
-      }
+      setWishes(savedWishes)
+      setPublicWishes(publicOnly.reverse())
+      setTotalWishes(savedWishes.length)
+      setPrivateCount(privateOnly.length)
+      setCategoryStats(getCategoryStats(publicOnly))
     }
+  }
 
+  // 刷新數據函數
+  const refreshData = async () => {
+    setIsRefreshing(true)
+    try {
+      await fetchWishes()
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  useEffect(() => {
     fetchWishes()
   }, [])
 
@@ -510,7 +536,19 @@ export default function WishesPage() {
       <main className="py-8 md:py-12 px-1 sm:px-4">
         <div className="container mx-auto max-w-4xl">
           <div id="wishes-title" className="text-center mb-6 md:mb-8">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-3 md:mb-4">聆聽每一份真實經歷</h2>
+            <div className="flex items-center justify-center gap-3 mb-3 md:mb-4">
+              <h2 className="text-2xl md:text-3xl font-bold text-white">聆聽每一份真實經歷</h2>
+              <Button
+                onClick={refreshData}
+                disabled={isRefreshing}
+                variant="ghost"
+                size="sm"
+                className="text-blue-200 hover:text-white hover:bg-blue-800/50 p-2"
+                title="刷新數據"
+              >
+                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </Button>
+            </div>
             <p className="text-blue-200 mb-4 md:mb-6 text-sm md:text-base px-1 sm:px-4">
               這裡收集了許多職場工作者願意公開分享的真實困擾和經驗
             </p>

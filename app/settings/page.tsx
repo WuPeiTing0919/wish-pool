@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Sparkles, ArrowLeft, Database, Settings, TestTube, Trash2 } from "lucide-react"
 import HeaderMusicControl from "@/components/header-music-control"
 import MigrationDialog from "@/components/migration-dialog"
-import { testSupabaseConnection, MigrationService } from "@/lib/supabase-service"
+import { testDatabaseConnection, MigrationService } from "@/lib/database-service"
 
 export default function SettingsPage() {
   const [showMigration, setShowMigration] = useState(false)
@@ -33,7 +33,7 @@ export default function SettingsPage() {
   const checkConnection = async () => {
     setIsLoading(true)
     try {
-      const connected = await testSupabaseConnection()
+      const connected = await testDatabaseConnection()
       setIsConnected(connected)
     } catch (error) {
       setIsConnected(false)
