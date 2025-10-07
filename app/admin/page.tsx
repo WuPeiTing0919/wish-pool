@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -106,6 +107,8 @@ interface AdminStats {
 }
 
 export default function AdminPage() {
+  const router = useRouter()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [wishes, setWishes] = useState<WishData[]>([])
   const [filteredWishes, setFilteredWishes] = useState<WishData[]>([])
   const [stats, setStats] = useState<AdminStats | null>(null)
@@ -511,9 +514,32 @@ export default function AdminPage() {
     setShowImageModal(true)
   }
 
+  // 登出
+  const handleLogout = () => {
+    sessionStorage.removeItem("adminLoggedIn")
+    router.push("/admin/login")
+  }
+
+  // 檢查登入狀態
   useEffect(() => {
-    fetchData()
-  }, [])
+    const checkAuth = () => {
+      const loggedIn = sessionStorage.getItem("adminLoggedIn")
+      if (loggedIn === "true") {
+        setIsAuthenticated(true)
+        fetchData()
+      } else {
+        router.push("/admin/login")
+      }
+    }
+    
+    checkAuth()
+  }, [router])
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchData()
+    }
+  }, [isAuthenticated])
 
   useEffect(() => {
     filterData()
@@ -525,6 +551,18 @@ export default function AdminPage() {
         <div className="text-center">
           <RefreshCw className="w-8 h-8 animate-spin text-white mx-auto mb-4" />
           <p className="text-white">載入中...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // 如果未認證，顯示載入中
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white">驗證中...</p>
         </div>
       </div>
     )
@@ -542,12 +580,12 @@ export default function AdminPage() {
         <div className="container mx-auto px-3 sm:px-4 py-3 md:py-4">
           <div className="flex items-center justify-between gap-2">
             {/* Logo 區域 */}
-            <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-shrink-0">
+            <Link href="/" className="flex items-center gap-2 md:gap-3 min-w-0 flex-shrink-0 hover:opacity-80 transition-opacity">
               <div className="w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center shadow-lg shadow-cyan-500/25">
                 <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-6 md:h-6 text-white" />
               </div>
               <h1 className="text-base sm:text-lg md:text-2xl font-bold text-white whitespace-nowrap">資訊部．心願星河</h1>
-            </div>
+            </Link>
 
             {/* 導航區域 */}
             <nav className="flex items-center gap-1 sm:gap-2 md:gap-4 flex-shrink-0">
@@ -564,13 +602,15 @@ export default function AdminPage() {
                 <HeaderMusicControl mobileSimplified />
               </div>
 
-              {/* 返回按鈕 */}
-              <Link href="/">
-                <Button variant="ghost" className="text-blue-200 hover:text-white hover:bg-blue-800/50 px-4">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  返回首頁
-                </Button>
-              </Link>
+              {/* 登出按鈕 */}
+              <Button
+                onClick={handleLogout}
+                variant="ghost"
+                className="text-blue-200 hover:text-white hover:bg-blue-800/50 px-4"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                登出
+              </Button>
             </nav>
           </div>
         </div>

@@ -120,7 +120,7 @@ export default function HomePage() {
                     分享困擾
                   </Button>
                 </Link>
-                <Link href="/admin">
+                <Link href="/admin/login">
                   <Button variant="ghost" className="text-blue-200 hover:text-white hover:bg-blue-800/50 px-4">
                     <Settings className="w-4 h-4 mr-2" />
                     後台管理
