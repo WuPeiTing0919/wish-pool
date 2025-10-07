@@ -40,6 +40,14 @@ import IpDisplay from "@/components/ip-display"
 import RadarChart from "@/components/radar-chart"
 import { categories, categorizeWishMultiple, type Wish } from "@/lib/categorization"
 
+// 擴展 Wish 接口以包含額外屬性
+interface ExtendedWish extends Wish {
+  isPublic?: boolean
+  email?: string
+  images?: any[]
+  like_count?: number
+}
+
 interface WishData {
   id: number
   title: string
@@ -116,13 +124,12 @@ export default function AdminPage() {
     categories.forEach((cat) => {
       categoryStats[cat.name] = 0
     })
-    categoryStats["其他問題"] = 0
 
     // 分析每個許願（多標籤統計）- 包含所有數據
     wishList.forEach((wish) => {
       // 轉換數據格式以匹配 categorization.ts 的 Wish 接口
-      const convertedWish: Wish = {
-        id: wish.id.toString(),
+      const convertedWish: ExtendedWish = {
+        id: wish.id,
         title: wish.title,
         currentPain: wish.current_pain,
         expectedSolution: wish.expected_solution,
@@ -152,7 +159,7 @@ export default function AdminPage() {
       })
     })
 
-    // 計算百分比和準備數據
+    // 計算百分比和準備數據，保留"其他問題"分類
     const categoryDetails: CategoryData[] = categories.map((cat) => ({
       name: cat.name,
       count: categoryStats[cat.name] || 0,
@@ -530,7 +537,7 @@ export default function AdminPage() {
                   <BarChart3 className="h-4 w-4 text-green-400" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-white">{Object.keys(stats.categories).length}</div>
+                  <div className="text-2xl font-bold text-white">{stats.categoryDetails?.filter((c) => c.count > 0).length || 0}</div>
                   <p className="text-xs text-blue-300">不同類別</p>
                 </CardContent>
               </Card>
@@ -752,70 +759,6 @@ export default function AdminPage() {
                 </div>
               </Card>
 
-              {/* 統計概覽 */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
-                <Card className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/50">
-                  <CardContent className="p-3 md:p-6 text-center">
-                    <div className="w-8 h-8 md:w-12 md:h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-2 md:mb-3">
-                      <Users className="w-4 h-4 md:w-6 md:h-6 text-white" />
-                    </div>
-                    <div className="text-xl md:text-3xl font-bold text-white mb-1">{stats?.totalWishes || 0}</div>
-                    <div className="text-xs md:text-sm text-blue-200">總案例數</div>
-                    <div className="text-xs text-slate-400 mt-1">
-                      公開 {stats?.publicWishes || 0} + 私密 {stats?.privateWishes || 0}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/50">
-                  <CardContent className="p-3 md:p-6 text-center">
-                    <div className="w-8 h-8 md:w-12 md:h-12 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-2 md:mb-3">
-                      <TrendingUp className="w-4 h-4 md:w-6 md:h-6 text-white" />
-                    </div>
-                    <div className="text-xl md:text-3xl font-bold text-white mb-1">{stats?.recentTrends?.thisWeek || 0}</div>
-                    <div className="text-xs md:text-sm text-blue-200">本週新增</div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/50">
-                  <CardContent className="p-3 md:p-6 text-center">
-                    <div className="w-8 h-8 md:w-12 md:h-12 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-2 md:mb-3">
-                      <Target className="w-4 h-4 md:w-6 md:h-6 text-white" />
-                    </div>
-                    <div className="text-xl md:text-3xl font-bold text-white mb-1">
-                      {stats?.categoryDetails?.filter((c) => c.count > 0).length || 0}
-                    </div>
-                    <div className="text-xs md:text-sm text-blue-200">問題領域</div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/50">
-                  <CardContent className="p-3 md:p-6 text-center">
-                    <div
-                      className="w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center mx-auto mb-2 md:mb-3"
-                      style={{
-                        background: `linear-gradient(135deg, ${stats?.recentTrends?.growthColor || '#6B7280'}80, ${stats?.recentTrends?.growthColor || '#6B7280'}60)`,
-                      }}
-                    >
-                      {stats?.recentTrends?.growthIcon === "up" ? (
-                        <TrendingUp className="w-4 h-4 md:w-6 md:h-6 text-white" />
-                      ) : stats?.recentTrends?.growthIcon === "down" ? (
-                        <TrendingDown className="w-4 h-4 md:w-6 md:h-6 text-white" />
-                      ) : (
-                        <Minus className="w-4 h-4 md:w-6 md:h-6 text-white" />
-                      )}
-                    </div>
-                    <div className="text-xl md:text-3xl font-bold text-white mb-1">
-                      {stats?.recentTrends?.growth && stats.recentTrends.growth > 0 ? "+" : ""}
-                      {stats?.recentTrends?.growth || 0}%
-                    </div>
-                    <div className="text-xs md:text-sm" style={{ color: stats?.recentTrends?.growthColor || '#6B7280' }}>
-                      {stats?.recentTrends?.growthLabel || "持平"}
-                    </div>
-                    <div className="text-xs text-slate-400 mt-1">上週: {stats?.recentTrends?.lastWeek || 0} 個</div>
-                  </CardContent>
-                </Card>
-              </div>
 
               {/* 分類指南 */}
               <Card className="bg-gradient-to-r from-blue-900/80 to-indigo-800/80 backdrop-blur-sm border border-blue-500/50">
