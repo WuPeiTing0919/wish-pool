@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { 
   Download, 
   Eye, 
@@ -31,7 +32,17 @@ import {
   ChevronUp,
   Shield,
   EyeOff,
-  HelpCircle
+  HelpCircle,
+  X,
+  Calendar,
+  User,
+  Mail,
+  Tag,
+  Star,
+  Image as ImageIcon,
+  Clock,
+  MapPin,
+  Monitor
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -106,6 +117,12 @@ export default function AdminPage() {
   const [isExportingExcel, setIsExportingExcel] = useState(false)
   const [showCategoryGuide, setShowCategoryGuide] = useState(false)
   const [showPrivacyDetails, setShowPrivacyDetails] = useState(false)
+  const [selectedWish, setSelectedWish] = useState<WishData | null>(null)
+  const [showWishDetails, setShowWishDetails] = useState(false)
+  const [wishDetails, setWishDetails] = useState<any>(null)
+  const [loadingDetails, setLoadingDetails] = useState(false)
+  const [showImageModal, setShowImageModal] = useState(false)
+  const [selectedImage, setSelectedImage] = useState<any>(null)
   
   // 分頁狀態
   const [currentPage, setCurrentPage] = useState(1)
@@ -465,6 +482,35 @@ export default function AdminPage() {
     }
   }
 
+  // 查看詳細資訊
+  const viewWishDetails = async (wish: WishData) => {
+    try {
+      setLoadingDetails(true)
+      setSelectedWish(wish)
+      
+      const response = await fetch(`/api/admin/wishes/${wish.id}`)
+      const result = await response.json()
+      
+      if (result.success) {
+        setWishDetails(result.data)
+        setShowWishDetails(true)
+      } else {
+        throw new Error(result.error || 'Failed to fetch details')
+      }
+    } catch (error) {
+      console.error('獲取詳細資訊失敗:', error)
+      alert('獲取詳細資訊失敗，請稍後再試')
+    } finally {
+      setLoadingDetails(false)
+    }
+  }
+
+  // 查看大圖
+  const viewImage = (image: any) => {
+    setSelectedImage(image)
+    setShowImageModal(true)
+  }
+
   useEffect(() => {
     fetchData()
   }, [])
@@ -740,9 +786,15 @@ export default function AdminPage() {
                               <Button
                                 size="sm"
                                 variant="outline"
+                                onClick={() => viewWishDetails(wish)}
+                                disabled={loadingDetails}
                                 className="text-blue-200 border-slate-600/50 hover:bg-slate-700/50 hover:text-white hover:border-cyan-400/50"
                               >
-                                <Eye className="w-4 h-4 mr-1" />
+                                {loadingDetails ? (
+                                  <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
+                                ) : (
+                                  <Eye className="w-4 h-4 mr-1" />
+                                )}
                                 查看
                               </Button>
                             </td>
@@ -1031,6 +1083,386 @@ export default function AdminPage() {
           </Tabs>
         </div>
       </main>
+
+      {/* 詳細資訊對話框 */}
+      <Dialog open={showWishDetails} onOpenChange={setShowWishDetails}>
+        <DialogContent className="w-[95vw] max-w-6xl h-[95vh] bg-slate-800 border-slate-700 flex flex-col p-0 z-[60]">
+          <DialogHeader className="px-6 py-4 border-b border-slate-600/50 flex-shrink-0">
+            <DialogTitle className="text-white flex items-center gap-2">
+              <Eye className="w-5 h-5 text-cyan-400" />
+              困擾案例詳細資訊
+            </DialogTitle>
+            <DialogDescription className="text-blue-200">
+              查看困擾案例的完整資訊，包括點讚記錄
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            {wishDetails && (
+              <div className="space-y-6">
+              {/* 基本信息 */}
+              <Card className="bg-slate-700/50 border-slate-600/50">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-green-400" />
+                    基本信息
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="flex items-center gap-2">
+                      <Tag className="w-4 h-4 text-blue-400" />
+                      <span className="text-blue-200">ID:</span>
+                      <span className="text-white font-mono">{wishDetails.id}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Star className="w-4 h-4 text-yellow-400" />
+                      <span className="text-blue-200">優先級:</span>
+                      <Badge variant="outline" className="text-white border-slate-500">
+                        {wishDetails.priority}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Eye className="w-4 h-4 text-cyan-400" />
+                      <span className="text-blue-200">可見性:</span>
+                      <Badge 
+                        variant={wishDetails.isPublic ? "default" : "outline"}
+                        className={wishDetails.isPublic 
+                          ? "bg-blue-600/20 text-blue-300 border-blue-500/30" 
+                          : "bg-orange-600/20 text-orange-300 border-orange-500/30"
+                        }
+                      >
+                        {wishDetails.isPublic ? '公開' : '私密'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Target className="w-4 h-4 text-green-400" />
+                      <span className="text-blue-200">狀態:</span>
+                      <Badge 
+                        variant={wishDetails.status === 'active' ? "default" : "secondary"}
+                        className={wishDetails.status === 'active' 
+                          ? "bg-green-600/20 text-green-300 border-green-500/30" 
+                          : "bg-slate-600/20 text-slate-300 border-slate-500/30"
+                        }
+                      >
+                        {wishDetails.status === 'active' ? '活躍' : '非活躍'}
+                      </Badge>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="text-blue-200 font-semibold mb-2">標題</h4>
+                    <p className="text-white bg-slate-800/50 p-3 rounded-lg border border-slate-600/30">
+                      {wishDetails.title}
+                    </p>
+                  </div>
+
+                  {wishDetails.category && (
+                    <div>
+                      <h4 className="text-blue-200 font-semibold mb-2">分類</h4>
+                      <Badge variant="outline" className="text-white border-slate-500">
+                        {wishDetails.category}
+                      </Badge>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* 困擾內容 */}
+              <Card className="bg-slate-700/50 border-slate-600/50">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Users className="w-5 h-5 text-red-400" />
+                    遇到的困擾
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-white bg-slate-800/50 p-4 rounded-lg border border-slate-600/30 whitespace-pre-wrap">
+                    {wishDetails.currentPain}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* 期望解決方式 */}
+              <Card className="bg-slate-700/50 border-slate-600/50">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Target className="w-5 h-5 text-green-400" />
+                    期望的解決方式
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-white bg-slate-800/50 p-4 rounded-lg border border-slate-600/30 whitespace-pre-wrap">
+                    {wishDetails.expectedSolution}
+                  </p>
+                </CardContent>
+              </Card>
+
+              {/* 預期效果 */}
+              {wishDetails.expectedEffect && (
+                <Card className="bg-slate-700/50 border-slate-600/50">
+                  <CardHeader>
+                    <CardTitle className="text-white flex items-center gap-2">
+                      <Star className="w-5 h-5 text-yellow-400" />
+                      預期效果
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-white bg-slate-800/50 p-4 rounded-lg border border-slate-600/30 whitespace-pre-wrap">
+                      {wishDetails.expectedEffect}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* 圖片 */}
+              {wishDetails.images && Array.isArray(wishDetails.images) && wishDetails.images.length > 0 && (
+                <Card className="bg-slate-700/50 border-slate-600/50">
+                  <CardHeader>
+                    <CardTitle className="text-white flex items-center gap-2">
+                      <ImageIcon className="w-5 h-5 text-purple-400" />
+                      相關圖片
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {wishDetails.images.map((image: any, index: number) => (
+                        <div key={index} className="bg-slate-800/50 rounded-lg border border-slate-600/30 overflow-hidden">
+                          {/* 圖片顯示 */}
+                          <div className="aspect-video bg-slate-900/50 flex items-center justify-center relative group cursor-pointer" onClick={() => viewImage(image)}>
+                            {(image.url || image.base64 || image.storage_path || image.public_url) ? (
+                              <>
+                                <img
+                                  src={image.public_url || image.url || image.base64 || image.storage_path}
+                                  alt={image.name || `圖片 ${index + 1}`}
+                                  className="max-w-full max-h-full object-contain rounded-lg transition-transform group-hover:scale-105"
+                                  onLoad={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.nextElementSibling?.classList.add('hidden');
+                                  }}
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    target.nextElementSibling?.classList.remove('hidden');
+                                  }}
+                                />
+                                {/* 載入中指示器 */}
+                                <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-8">
+                                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400 mb-2"></div>
+                                  <span className="text-sm">載入中...</span>
+                                </div>
+                                {/* 放大圖標 */}
+                                <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                  </svg>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="flex flex-col items-center justify-center text-slate-400 p-8">
+                                <ImageIcon className="w-12 h-12 mb-2 text-slate-500" />
+                                <span className="text-sm">無圖片數據</span>
+                              </div>
+                            )}
+                          </div>
+                          {/* 圖片資訊 */}
+                          <div className="p-3 border-t border-slate-600/30">
+                            <div className="flex items-center justify-between">
+                              <div className="text-sm text-white font-medium truncate">
+                                {image.name || `圖片 ${index + 1}`}
+                              </div>
+                              <div className="text-xs text-cyan-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                點擊放大
+                              </div>
+                            </div>
+                            {image.size && (
+                              <div className="text-xs text-slate-400 mt-1">
+                                大小: {typeof image.size === 'number' ? `${(image.size / 1024).toFixed(1)} KB` : image.size}
+                              </div>
+                            )}
+                            {image.type && (
+                              <div className="text-xs text-slate-400">
+                                類型: {image.type}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* 用戶資訊 */}
+              <Card className="bg-slate-700/50 border-slate-600/50">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <User className="w-5 h-5 text-cyan-400" />
+                    用戶資訊
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-blue-400" />
+                    <span className="text-blue-200">會話 ID:</span>
+                    <span className="text-white font-mono text-sm">{wishDetails.userSession}</span>
+                  </div>
+                  {wishDetails.email && (
+                    <div className="flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-green-400" />
+                      <span className="text-blue-200">電子郵件:</span>
+                      <span className="text-white">{wishDetails.email}</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* 時間資訊 */}
+              <Card className="bg-slate-700/50 border-slate-600/50">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-orange-400" />
+                    時間資訊
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-blue-400" />
+                    <span className="text-blue-200">創建時間:</span>
+                    <span className="text-white">
+                      {new Date(wishDetails.createdAt).toLocaleString('zh-TW')}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-green-400" />
+                    <span className="text-blue-200">更新時間:</span>
+                    <span className="text-white">
+                      {new Date(wishDetails.updatedAt).toLocaleString('zh-TW')}
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 點讚記錄 */}
+              <Card className="bg-slate-700/50 border-slate-600/50">
+                <CardHeader>
+                  <CardTitle className="text-white flex items-center gap-2">
+                    <Heart className="w-5 h-5 text-pink-400" />
+                    點讚記錄 ({wishDetails.likes?.length || 0} 個)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {wishDetails.likes && wishDetails.likes.length > 0 ? (
+                    <div className="space-y-3 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
+                      {wishDetails.likes.map((like: any, index: number) => (
+                        <div key={like.id} className="bg-slate-800/50 p-3 rounded-lg border border-slate-600/30">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <Heart className="w-4 h-4 text-pink-400" />
+                              <span className="text-blue-200">點讚 #{index + 1}</span>
+                            </div>
+                            <span className="text-slate-400 text-sm">
+                              {new Date(like.createdAt).toLocaleString('zh-TW')}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                            <div className="flex items-center gap-2">
+                              <User className="w-3 h-3 text-blue-400" />
+                              <span className="text-blue-200">會話:</span>
+                              <span className="text-white font-mono text-xs">{like.userSession}</span>
+                            </div>
+                            {like.ipAddress && (
+                              <div className="flex items-center gap-2">
+                                <MapPin className="w-3 h-3 text-green-400" />
+                                <span className="text-blue-200">IP:</span>
+                                <span className="text-white font-mono text-xs">{like.ipAddress}</span>
+                              </div>
+                            )}
+                          </div>
+                          {like.userAgent && (
+                            <div className="mt-2 flex items-start gap-2">
+                              <Monitor className="w-3 h-3 text-purple-400 mt-0.5" />
+                              <span className="text-blue-200 text-xs">瀏覽器:</span>
+                              <span className="text-slate-300 text-xs break-all">{like.userAgent}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Heart className="w-8 h-8 text-slate-500 mx-auto mb-2" />
+                      <p className="text-slate-400">暫無點讚記錄</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end px-6 py-4 border-t border-slate-600/50 flex-shrink-0">
+            <Button
+              onClick={() => setShowWishDetails(false)}
+              className="bg-slate-700 hover:bg-slate-600 text-white"
+            >
+              <X className="w-4 h-4 mr-2" />
+              關閉
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 圖片放大對話框 */}
+      <Dialog open={showImageModal} onOpenChange={setShowImageModal}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] bg-black border-slate-700 p-0 overflow-hidden">
+          <DialogHeader className="px-6 py-4 border-b border-slate-600/50 flex-shrink-0">
+            <DialogTitle className="text-white flex items-center gap-2">
+              <ImageIcon className="w-5 h-5 text-purple-400" />
+              {selectedImage?.name || '圖片預覽'}
+            </DialogTitle>
+            <DialogDescription className="text-blue-200">
+              點擊圖片外部或按 ESC 鍵關閉
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 flex items-center justify-center p-4 bg-black relative">
+            {selectedImage && (
+              <>
+                <img
+                  src={selectedImage.public_url || selectedImage.url || selectedImage.base64 || selectedImage.storage_path}
+                  alt={selectedImage.name || '圖片預覽'}
+                  className="max-w-full max-h-full object-contain"
+                  onClick={(e) => e.stopPropagation()}
+                />
+                {/* 圖片載入失敗處理 */}
+                <div className="hidden flex-col items-center justify-center text-slate-400">
+                  <ImageIcon className="w-16 h-16 mb-4 text-slate-500" />
+                  <span className="text-lg">圖片載入失敗</span>
+                </div>
+              </>
+            )}
+          </div>
+
+          <div className="flex justify-between items-center px-6 py-4 border-t border-slate-600/50 flex-shrink-0 bg-slate-800/50">
+            <div className="text-sm text-slate-300">
+              {selectedImage?.size && (
+                <span>大小: {typeof selectedImage.size === 'number' ? `${(selectedImage.size / 1024).toFixed(1)} KB` : selectedImage.size}</span>
+              )}
+              {selectedImage?.type && (
+                <span className="ml-4">類型: {selectedImage.type}</span>
+              )}
+            </div>
+            <Button
+              onClick={() => setShowImageModal(false)}
+              className="bg-slate-700 hover:bg-slate-600 text-white"
+            >
+              <X className="w-4 h-4 mr-2" />
+              關閉
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
