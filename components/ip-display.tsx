@@ -28,7 +28,7 @@ interface IpInfo {
   }
 }
 
-// 清理IP地址，確保顯示IPv4格式
+// 清理IP地址，支持IPv4和IPv6格式
 function cleanIpForDisplay(ip: string): string {
   if (!ip) return '127.0.0.1';
   
@@ -51,7 +51,13 @@ function cleanIpForDisplay(ip: string): string {
     return ip;
   }
   
-  // 如果不是有效的IPv4，返回默認值
+  // 驗證是否為有效的IPv6地址
+  const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^::$|^([0-9a-fA-F]{1,4}:)*::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:)*::[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:)+::$|^::$/;
+  if (ipv6Regex.test(ip)) {
+    return ip; // 直接返回IPv6地址
+  }
+  
+  // 如果不是有效的IP，返回默認值
   return '127.0.0.1';
 }
 
@@ -74,11 +80,18 @@ export default function IpDisplay({ mobileSimplified = false }: IpDisplayProps) 
   useEffect(() => {
     const fetchIpInfo = async () => {
       try {
-        const response = await fetch('/api/ip')
+        // 添加时间戳防止缓存，确保获取最新的IP检测结果
+        const response = await fetch(`/api/ip?t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache'
+          }
+        })
         if (!response.ok) {
           throw new Error('無法獲取IP信息')
         }
         const data = await response.json()
+        console.log('IP显示组件获取到数据:', data)
         setIpInfo(data)
       } catch (error) {
         console.error("無法獲取IP信息:", error)
@@ -109,8 +122,11 @@ export default function IpDisplay({ mobileSimplified = false }: IpDisplayProps) 
     )
   }
 
-  // 清理IP地址確保顯示IPv4格式
+  // 清理IP地址，支持IPv4和IPv6格式
   const displayIp = cleanIpForDisplay(ipInfo.ip);
+  
+  // 检测是否是真正的IPv6地址
+  const isRealIPv6 = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:)*::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:)*::[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:)+::$|^::$/.test(displayIp);
   
   // 使用API返回的IPv6信息，如果沒有則回退到本地檢測
   const isIPv6Mapped = ipInfo.ipv6Info?.isIPv6Mapped || isIPv6MappedIPv4(ipInfo.debug?.originalDetectedIp || ipInfo.ip);
@@ -131,7 +147,7 @@ export default function IpDisplay({ mobileSimplified = false }: IpDisplayProps) 
           <Shield className="w-2.5 h-2.5 text-green-300" />
         )}
         <span className="text-xs font-mono text-blue-200">
-          {isIPv6Mapped ? 'IPv6' : 'IPv4'}: {displayIp.split('.').slice(0, 2).join('.')}...
+          {isRealIPv6 ? 'IPv6' : 'IPv4'}: {isRealIPv6 ? displayIp.substring(0, 10) + '...' : displayIp.split('.').slice(0, 2).join('.') + '...'}
         </span>
       </div>
     )
@@ -152,9 +168,9 @@ export default function IpDisplay({ mobileSimplified = false }: IpDisplayProps) 
         
         <div className="flex flex-col">
           <span className="text-xs text-blue-200 font-mono">
-            {isIPv6Mapped ? 'IPv6' : 'IPv4'}: {displayIp}
+            {isRealIPv6 ? 'IPv6' : 'IPv4'}: {displayIp}
           </span>
-          {isIPv6Mapped && (
+          {isIPv6Mapped && !isRealIPv6 && (
             <span className="text-xs text-cyan-300 font-mono">
               {ipv6Format}
             </span>

@@ -100,10 +100,18 @@ export default function IpDebugPage() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold">IP 檢測調試</h1>
-        <Button onClick={fetchIpInfo} variant="outline">
-          <RefreshCw className="w-4 h-4 mr-2" />
-          刷新
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={fetchIpInfo} variant="outline">
+            <RefreshCw className="w-4 h-4 mr-2" />
+            刷新
+          </Button>
+          <Button 
+            onClick={() => window.open('/api/ip-diagnostic', '_blank')} 
+            variant="secondary"
+          >
+            完整診斷
+          </Button>
+        </div>
       </div>
 
       {/* 主要IP信息 */}

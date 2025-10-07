@@ -43,7 +43,12 @@ export function isIpAllowed(clientIp: string, allowedIps: string): boolean {
   
   for (const allowedIp of allowedIpList) {
     try {
-      if (isIpInRange(clientIp, allowedIp)) {
+      // 如果是IPv6地址，直接比较字符串
+      if (isValidIPv6(clientIp)) {
+        if (clientIp === allowedIp) {
+          return true;
+        }
+      } else if (isIpInRange(clientIp, allowedIp)) {
         return true;
       }
     } catch (error) {
@@ -71,40 +76,112 @@ function cleanIpAddress(ip: string): string | null {
     return '127.0.0.1';
   }
   
-  // 驗證IP格式
-  if (!isValidIp(ip)) {
+  // 驗證IP格式 - 支持IPv4和IPv6
+  if (!isValidIp(ip) && !isValidIPv6(ip)) {
     return null;
   }
   
   return ip;
 }
 
+// 檢測IP策略 - 根據請求頭判斷環境類型
+function detectIpStrategy(req: any): {
+  isCloudflare: boolean;
+  isProxy: boolean;
+  isDirect: boolean;
+  strategy: string;
+} {
+  const hasCfConnectingIp = !!req.headers['cf-connecting-ip'];
+  const hasCfRay = !!req.headers['cf-ray'];
+  const hasCfVisitor = !!req.headers['cf-visitor'];
+  const hasXForwardedFor = !!req.headers['x-forwarded-for'];
+  const hasXRealIp = !!req.headers['x-real-ip'];
+  const hasNginxProxy = !!req.headers['x-nginx-proxy-real-ip'];
+  const has1Panel = !!req.headers['x-1panel-client-ip'];
+  
+  const isCloudflare = hasCfConnectingIp || hasCfRay || hasCfVisitor;
+  const isProxy = hasXForwardedFor || hasXRealIp || hasNginxProxy || has1Panel;
+  const isDirect = !isCloudflare && !isProxy;
+  
+  let strategy = 'unknown';
+  if (isCloudflare) {
+    strategy = 'cloudflare';
+  } else if (isProxy) {
+    strategy = 'proxy';
+  } else {
+    strategy = 'direct';
+  }
+  
+  return {
+    isCloudflare,
+    isProxy,
+    isDirect,
+    strategy
+  };
+}
+
 // 獲取客戶端真實IP
 export function getClientIp(req: any): string {
-  // 按優先順序檢查各種IP來源
-  const ipSources = [
-    // 1Panel 和常見代理伺服器轉發的IP (優先級最高)
-    req.headers['x-forwarded-for'],
-    req.headers['x-real-ip'],
-    req.headers['x-client-ip'],
-    req.headers['cf-connecting-ip'], // Cloudflare
-    req.headers['x-original-forwarded-for'], // 某些代理伺服器
-    req.headers['x-cluster-client-ip'], // 集群環境
-    
-    // 其他代理頭
-    req.headers['x-forwarded'], // 舊版代理頭
-    req.headers['forwarded-for'],
-    req.headers['forwarded'],
-    
-    // 1Panel 特殊頭部
-    req.headers['x-1panel-client-ip'], // 1Panel 可能使用的頭部
-    req.headers['x-nginx-proxy-real-ip'], // Nginx 代理
-    
-    // 直接連接的IP
-    req.connection?.remoteAddress,
-    req.socket?.remoteAddress,
-    req.ip,
-  ];
+  // 智能IP檢測 - 根據實際環境動態調整優先級
+  const ipDetectionStrategy = detectIpStrategy(req);
+  
+  let ipSources: (string | undefined)[];
+  
+  if (ipDetectionStrategy.isCloudflare) {
+    // Cloudflare 環境的優先級 - 根據你的實際環境優化
+    ipSources = [
+      req.headers['cf-connecting-ip'], // 你的真實IP: 114.33.18.13
+      req.headers['x-forwarded-for'], // 備用來源 (但第一個IP是代理IP，所以不優先)
+      req.headers['x-real-ip'], // 這是代理IP: 172.70.214.81，不應該使用
+      req.headers['x-client-ip'],
+      req.headers['x-original-forwarded-for'],
+      req.headers['x-cluster-client-ip'],
+      req.headers['x-forwarded'],
+      req.headers['forwarded-for'],
+      req.headers['forwarded'],
+      req.headers['x-1panel-client-ip'],
+      req.headers['x-nginx-proxy-real-ip'],
+      req.connection?.remoteAddress,
+      req.socket?.remoteAddress,
+      req.ip,
+    ];
+  } else if (ipDetectionStrategy.isProxy) {
+    // 代理環境的優先級
+    ipSources = [
+      req.headers['x-forwarded-for'],
+      req.headers['x-real-ip'],
+      req.headers['x-client-ip'],
+      req.headers['x-original-forwarded-for'],
+      req.headers['x-cluster-client-ip'],
+      req.headers['cf-connecting-ip'], // 即使不是Cloudflare也可能有這個頭
+      req.headers['x-forwarded'],
+      req.headers['forwarded-for'],
+      req.headers['forwarded'],
+      req.headers['x-1panel-client-ip'],
+      req.headers['x-nginx-proxy-real-ip'],
+      req.connection?.remoteAddress,
+      req.socket?.remoteAddress,
+      req.ip,
+    ];
+  } else {
+    // 直接連接的優先級
+    ipSources = [
+      req.headers['x-forwarded-for'],
+      req.headers['x-real-ip'],
+      req.headers['x-client-ip'],
+      req.headers['cf-connecting-ip'],
+      req.headers['x-original-forwarded-for'],
+      req.headers['x-cluster-client-ip'],
+      req.headers['x-forwarded'],
+      req.headers['forwarded-for'],
+      req.headers['forwarded'],
+      req.headers['x-1panel-client-ip'],
+      req.headers['x-nginx-proxy-real-ip'],
+      req.connection?.remoteAddress,
+      req.socket?.remoteAddress,
+      req.ip,
+    ];
+  }
 
   // 收集所有找到的IP用於調試
   const foundIps: string[] = [];
@@ -119,8 +196,15 @@ export function getClientIp(req: any): string {
         const cleanIp = cleanIpAddress(ip);
         if (cleanIp) {
           foundIps.push(cleanIp);
-          // 檢查是否為公網IP，排除內部IP和1Panel代理IP
-          if (isPublicIp(cleanIp) && !isInternalProxyIp(cleanIp)) {
+          
+          // 特殊處理：如果是 cf-connecting-ip 頭部，直接返回（這是最可靠的）
+          if (ipSource === req.headers['cf-connecting-ip']) {
+            console.log('使用 cf-connecting-ip:', cleanIp, isValidIPv6(cleanIp) ? '(IPv6)' : '(IPv4)');
+            return cleanIp;
+          }
+          
+          // 檢查是否為公網IP，排除內部IP和代理IP
+          if ((isPublicIp(cleanIp) || isValidIPv6(cleanIp)) && !isInternalProxyIp(cleanIp)) {
             return cleanIp;
           }
         }
@@ -392,10 +476,17 @@ function isInternalProxyIp(ip: string): boolean {
   return proxyRanges.some(range => range.test(ip));
 }
 
-// 驗證IP地址格式
+// 驗證IPv4地址格式
 export function isValidIp(ip: string): boolean {
   const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
   return ipRegex.test(ip);
+}
+
+// 驗證IPv6地址格式
+export function isValidIPv6(ip: string): boolean {
+  // 簡化的IPv6驗證正則表達式
+  const ipv6Regex = /^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^::$|^([0-9a-fA-F]{1,4}:)*::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:)*::[0-9a-fA-F]{1,4}$|^([0-9a-fA-F]{1,4}:)+::$|^::$/;
+  return ipv6Regex.test(ip);
 }
 
 // 驗證CIDR格式

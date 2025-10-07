@@ -10,16 +10,22 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // 獲取客戶端IP
+  // 獲取客戶端IP - 使用與API相同的邏輯
   const clientIp = getClientIp(request)
   
   // 獲取允許的IP列表
   const allowedIps = process.env.ALLOWED_IPS || ''
   
+  // 調試信息
+  console.log(`[Middleware] IP檢測: ${clientIp}, 路徑: ${request.nextUrl.pathname}`)
+  console.log(`[Middleware] 白名單狀態: ${enableIpWhitelist}`)
+  console.log(`[Middleware] 允許的IP: ${allowedIps}`)
+  
   // 檢查IP是否被允許
   if (!isIpAllowed(clientIp, allowedIps)) {
     // 記錄被拒絕的訪問
-    console.warn(`Access denied for IP: ${clientIp} - Path: ${request.nextUrl.pathname}`)
+    console.warn(`[Middleware] Access denied for IP: ${clientIp} - Path: ${request.nextUrl.pathname}`)
+    console.warn(`[Middleware] 允許的IP列表: ${allowedIps}`)
     
     // 返回403禁止訪問頁面
     return new NextResponse(
@@ -112,12 +118,13 @@ export const config = {
   matcher: [
     /*
      * 匹配所有路徑，除了：
-     * - api (API routes)
+     * - api/ip (IP檢測API，允許訪問)
+     * - api/ip-diagnostic (IP診斷API，允許訪問)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - icon.png (icon file)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|icon.png).*)',
+    '/((?!api/ip|api/ip-diagnostic|_next/static|_next/image|favicon.ico|icon.png).*)',
   ],
 } 

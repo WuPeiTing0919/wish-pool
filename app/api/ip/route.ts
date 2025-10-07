@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getClientIp, isIpAllowed, getIpLocation, getDetailedIpInfo } from '@/lib/ip-utils'
+import { getClientIp, isIpAllowed, getIpLocation, getDetailedIpInfo, isValidIp, isValidIPv6 } from '@/lib/ip-utils'
 
 // 強制動態渲染
 export const dynamic = 'force-dynamic'
@@ -9,6 +9,17 @@ export async function GET(request: NextRequest) {
     // 使用詳細的IP檢測功能
     const detailedInfo = getDetailedIpInfo(request);
     let clientIp = detailedInfo.detectedIp;
+    
+    // 根據你的環境，優先使用 cf-connecting-ip (支持IPv4和IPv6)
+    const cfConnectingIp = request.headers.get('cf-connecting-ip');
+    if (cfConnectingIp && cfConnectingIp.trim() !== '') {
+      const cleanCfIp = cfConnectingIp.trim();
+      // 检查是否是有效的IPv4或IPv6地址
+      if (isValidIp(cleanCfIp) || isValidIPv6(cleanCfIp)) {
+        clientIp = cleanCfIp;
+        console.log('使用 cf-connecting-ip:', clientIp, isValidIPv6(clientIp) ? '(IPv6)' : '(IPv4)');
+      }
+    }
     
     // 確保返回IPv4格式的地址
     function ensureIPv4Format(ip: string): string {
