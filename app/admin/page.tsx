@@ -21,12 +21,24 @@ import {
   Settings,
   Plus,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  Target,
+  BookOpen,
+  ChevronDown,
+  ChevronUp,
+  Shield,
+  EyeOff,
+  HelpCircle
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import HeaderMusicControl from "@/components/header-music-control"
 import IpDisplay from "@/components/ip-display"
+import RadarChart from "@/components/radar-chart"
+import { categories, categorizeWishMultiple, type Wish } from "@/lib/categorization"
 
 interface WishData {
   id: number
@@ -46,6 +58,15 @@ interface WishData {
   updated_at: string
 }
 
+interface CategoryData {
+  name: string
+  count: number
+  percentage: number
+  color: string
+  keywords: string[]
+  description?: string
+}
+
 interface AdminStats {
   totalWishes: number
   publicWishes: number
@@ -53,6 +74,16 @@ interface AdminStats {
   totalLikes: number
   categories: { [key: string]: number }
   recentWishes: number
+  categoryDetails: CategoryData[]
+  recentTrends: {
+    thisWeek: number
+    lastWeek: number
+    growth: number
+    growthLabel: string
+    growthIcon: "up" | "down" | "flat"
+    growthColor: string
+  }
+  topKeywords: { word: string; count: number }[]
 }
 
 export default function AdminPage() {
@@ -64,10 +95,146 @@ export default function AdminPage() {
   const [statusFilter, setStatusFilter] = useState("all")
   const [visibilityFilter, setVisibilityFilter] = useState("all")
   const [isExporting, setIsExporting] = useState(false)
+  const [showCategoryGuide, setShowCategoryGuide] = useState(false)
+  const [showPrivacyDetails, setShowPrivacyDetails] = useState(false)
   
   // 分頁狀態
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
+
+  // 分析許願內容（包含所有數據，包括私密的）
+  const analyzeWishes = (wishList: WishData[]): AdminStats => {
+    const totalWishes = wishList.length
+    const publicWishes = wishList.filter((wish) => wish.is_public !== false).length
+    const privateWishes = wishList.filter((wish) => wish.is_public === false).length
+    const totalLikes = wishList.reduce((sum, wish) => sum + wish.like_count, 0)
+
+    const categoryStats: { [key: string]: number } = {}
+    const keywordCount: { [key: string]: number } = {}
+
+    // 初始化分類統計
+    categories.forEach((cat) => {
+      categoryStats[cat.name] = 0
+    })
+    categoryStats["其他問題"] = 0
+
+    // 分析每個許願（多標籤統計）- 包含所有數據
+    wishList.forEach((wish) => {
+      // 轉換數據格式以匹配 categorization.ts 的 Wish 接口
+      const convertedWish: Wish = {
+        id: wish.id.toString(),
+        title: wish.title,
+        currentPain: wish.current_pain,
+        expectedSolution: wish.expected_solution,
+        expectedEffect: wish.expected_effect || "",
+        createdAt: wish.created_at,
+        isPublic: wish.is_public,
+        email: wish.email,
+        images: wish.images,
+        like_count: wish.like_count || 0,
+      }
+
+      const wishCategories = categorizeWishMultiple(convertedWish)
+
+      wishCategories.forEach((category) => {
+        categoryStats[category.name]++
+
+        // 統計關鍵字
+        if (category.keywords) {
+          const fullText =
+            `${wish.title} ${wish.current_pain} ${wish.expected_solution} ${wish.expected_effect}`.toLowerCase()
+          category.keywords.forEach((keyword: string) => {
+            if (fullText.includes(keyword.toLowerCase())) {
+              keywordCount[keyword] = (keywordCount[keyword] || 0) + 1
+            }
+          })
+        }
+      })
+    })
+
+    // 計算百分比和準備數據
+    const categoryDetails: CategoryData[] = categories.map((cat) => ({
+      name: cat.name,
+      count: categoryStats[cat.name] || 0,
+      percentage: totalWishes > 0 ? Math.round(((categoryStats[cat.name] || 0) / totalWishes) * 100) : 0,
+      color: cat.color,
+      keywords: cat.keywords,
+      description: cat.description,
+    }))
+
+    // 改進的趨勢計算
+    const now = new Date()
+    const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+
+    const thisWeek = wishList.filter((wish) => new Date(wish.created_at) >= oneWeekAgo).length
+    const lastWeek = wishList.filter((wish) => {
+      const date = new Date(wish.created_at)
+      return date >= twoWeeksAgo && date < oneWeekAgo
+    }).length
+
+    // 改進的成長趨勢計算
+    let growth = 0
+    let growthLabel = "持平"
+    let growthIcon: "up" | "down" | "flat" = "flat"
+    let growthColor = "#6B7280"
+
+    if (lastWeek === 0 && thisWeek > 0) {
+      // 上週沒有，本週有 → 全新開始
+      growth = 100
+      growthLabel = "開始增長"
+      growthIcon = "up"
+      growthColor = "#10B981"
+    } else if (lastWeek === 0 && thisWeek === 0) {
+      // 兩週都沒有
+      growth = 0
+      growthLabel = "尚無數據"
+      growthIcon = "flat"
+      growthColor = "#6B7280"
+    } else if (lastWeek > 0) {
+      // 正常計算成長率
+      growth = Math.round(((thisWeek - lastWeek) / lastWeek) * 100)
+
+      if (growth > 0) {
+        growthLabel = "持續增長"
+        growthIcon = "up"
+        growthColor = "#10B981"
+      } else if (growth < 0) {
+        growthLabel = "有所下降"
+        growthIcon = "down"
+        growthColor = "#EF4444"
+      } else {
+        growthLabel = "保持穩定"
+        growthIcon = "flat"
+        growthColor = "#6B7280"
+      }
+    }
+
+    // 取得熱門關鍵字
+    const topKeywords = Object.entries(keywordCount)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 15)
+      .map(([word, count]) => ({ word, count }))
+
+    return {
+      totalWishes,
+      publicWishes,
+      privateWishes,
+      totalLikes,
+      categories: categoryStats,
+      recentWishes: thisWeek,
+      categoryDetails,
+      recentTrends: {
+        thisWeek,
+        lastWeek,
+        growth,
+        growthLabel,
+        growthIcon,
+        growthColor,
+      },
+      topKeywords,
+    }
+  }
 
   // 獲取所有數據
   const fetchData = async () => {
@@ -79,16 +246,13 @@ export default function AdminPage() {
       const wishesResult = await wishesResponse.json()
       
       if (wishesResult.success) {
-        setWishes(wishesResult.data)
-        setFilteredWishes(wishesResult.data)
-      }
-      
-      // 獲取統計數據
-      const statsResponse = await fetch('/api/admin/stats')
-      const statsResult = await statsResponse.json()
-      
-      if (statsResult.success) {
-        setStats(statsResult.data)
+        const wishesData = wishesResult.data
+        setWishes(wishesData)
+        setFilteredWishes(wishesData)
+        
+        // 使用本地分析函數生成詳細統計
+        const detailedStats = analyzeWishes(wishesData)
+        setStats(detailedStats)
       }
       
     } catch (error) {
@@ -537,59 +701,338 @@ export default function AdminPage() {
           </TabsContent>
 
             <TabsContent value="analytics" className="space-y-6">
-              <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700/50">
-                <CardHeader>
-                  <CardTitle className="text-white flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-cyan-400" />
-                    數據分析
-                  </CardTitle>
-                  <CardDescription className="text-blue-200">
-                    困擾案例統計與分析
-                  </CardDescription>
+              {/* 隱私說明卡片 */}
+              <Card className="bg-gradient-to-r from-blue-900/80 to-indigo-800/80 backdrop-blur-sm border border-blue-500/50">
+                <CardHeader className="pb-3 md:pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                      <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-full flex items-center justify-center flex-shrink-0">
+                        <Shield className="w-3 h-3 md:w-4 md:h-4 text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-base md:text-xl lg:text-2xl text-white truncate">數據隱私說明</CardTitle>
+                        <CardDescription className="text-white/90 text-xs md:text-sm lg:text-base">
+                          本分析包含所有提交的案例，包括選擇保持私密的困擾
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowPrivacyDetails(!showPrivacyDetails)}
+                      className="text-indigo-200 hover:text-white hover:bg-indigo-700/50 px-2 md:px-3 flex-shrink-0 md:hidden"
+                    >
+                      {showPrivacyDetails ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </Button>
+                  </div>
                 </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* 類別分布 */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-green-400" />
-                        問題類別分布
-                      </h3>
-                      <div className="space-y-3">
-                        {stats && Object.entries(stats.categories).map(([category, count]) => (
-                          <div key={category} className="flex justify-between items-center p-3 bg-slate-700/30 rounded-lg">
-                            <span className="text-white">{category}</span>
-                            <Badge 
-                              variant="outline" 
-                              className="bg-cyan-600/20 text-cyan-300 border-cyan-500/30"
-                            >
-                              {count}
+                <div className={`${showPrivacyDetails ? "block" : "hidden"} md:block`}>
+                  <CardContent className="pt-0">
+                    <div className="grid sm:grid-cols-2 gap-3 md:gap-4 text-sm">
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-indigo-200 flex items-center gap-2">
+                          <Eye className="w-3 h-3 md:w-4 md:h-4" />
+                          公開案例 ({stats?.publicWishes || 0} 個)
+                        </h4>
+                        <p className="text-indigo-100 text-xs md:text-sm leading-relaxed">
+                          這些案例會顯示在「聆聽心聲」頁面，供其他人查看和產生共鳴
+                        </p>
+                      </div>
+                      <div className="space-y-2">
+                        <h4 className="font-semibold text-indigo-200 flex items-center gap-2">
+                          <EyeOff className="w-3 h-3 md:w-4 md:h-4" />
+                          私密案例 ({stats?.privateWishes || 0} 個)
+                        </h4>
+                        <p className="text-indigo-100 text-xs md:text-sm leading-relaxed">
+                          這些案例保持匿名且私密，僅用於統計分析，幫助了解整體趨勢
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </div>
+              </Card>
+
+              {/* 統計概覽 */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-6">
+                <Card className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/50">
+                  <CardContent className="p-3 md:p-6 text-center">
+                    <div className="w-8 h-8 md:w-12 md:h-12 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-2 md:mb-3">
+                      <Users className="w-4 h-4 md:w-6 md:h-6 text-white" />
+                    </div>
+                    <div className="text-xl md:text-3xl font-bold text-white mb-1">{stats?.totalWishes || 0}</div>
+                    <div className="text-xs md:text-sm text-blue-200">總案例數</div>
+                    <div className="text-xs text-slate-400 mt-1">
+                      公開 {stats?.publicWishes || 0} + 私密 {stats?.privateWishes || 0}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/50">
+                  <CardContent className="p-3 md:p-6 text-center">
+                    <div className="w-8 h-8 md:w-12 md:h-12 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-2 md:mb-3">
+                      <TrendingUp className="w-4 h-4 md:w-6 md:h-6 text-white" />
+                    </div>
+                    <div className="text-xl md:text-3xl font-bold text-white mb-1">{stats?.recentTrends?.thisWeek || 0}</div>
+                    <div className="text-xs md:text-sm text-blue-200">本週新增</div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/50">
+                  <CardContent className="p-3 md:p-6 text-center">
+                    <div className="w-8 h-8 md:w-12 md:h-12 bg-gradient-to-br from-purple-400 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-2 md:mb-3">
+                      <Target className="w-4 h-4 md:w-6 md:h-6 text-white" />
+                    </div>
+                    <div className="text-xl md:text-3xl font-bold text-white mb-1">
+                      {stats?.categoryDetails?.filter((c) => c.count > 0).length || 0}
+                    </div>
+                    <div className="text-xs md:text-sm text-blue-200">問題領域</div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/50">
+                  <CardContent className="p-3 md:p-6 text-center">
+                    <div
+                      className="w-8 h-8 md:w-12 md:h-12 rounded-full flex items-center justify-center mx-auto mb-2 md:mb-3"
+                      style={{
+                        background: `linear-gradient(135deg, ${stats?.recentTrends?.growthColor || '#6B7280'}80, ${stats?.recentTrends?.growthColor || '#6B7280'}60)`,
+                      }}
+                    >
+                      {stats?.recentTrends?.growthIcon === "up" ? (
+                        <TrendingUp className="w-4 h-4 md:w-6 md:h-6 text-white" />
+                      ) : stats?.recentTrends?.growthIcon === "down" ? (
+                        <TrendingDown className="w-4 h-4 md:w-6 md:h-6 text-white" />
+                      ) : (
+                        <Minus className="w-4 h-4 md:w-6 md:h-6 text-white" />
+                      )}
+                    </div>
+                    <div className="text-xl md:text-3xl font-bold text-white mb-1">
+                      {stats?.recentTrends?.growth && stats.recentTrends.growth > 0 ? "+" : ""}
+                      {stats?.recentTrends?.growth || 0}%
+                    </div>
+                    <div className="text-xs md:text-sm" style={{ color: stats?.recentTrends?.growthColor || '#6B7280' }}>
+                      {stats?.recentTrends?.growthLabel || "持平"}
+                    </div>
+                    <div className="text-xs text-slate-400 mt-1">上週: {stats?.recentTrends?.lastWeek || 0} 個</div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* 分類指南 */}
+              <Card className="bg-gradient-to-r from-blue-900/80 to-indigo-800/80 backdrop-blur-sm border border-blue-500/50">
+                <CardHeader>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                      <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-full flex items-center justify-center flex-shrink-0">
+                        <BookOpen className="w-3 h-3 md:w-4 md:h-4 text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <CardTitle className="text-base md:text-xl lg:text-2xl text-white">問題分類說明</CardTitle>
+                        <CardDescription className="text-white/90 text-xs md:text-sm lg:text-base">
+                          了解我們如何分類和分析各種職場困擾
+                        </CardDescription>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowCategoryGuide(!showCategoryGuide)}
+                      className="text-indigo-200 hover:text-white hover:bg-indigo-800/50 self-start sm:self-auto flex-shrink-0"
+                    >
+                      {showCategoryGuide ? (
+                        <>
+                          <ChevronUp className="w-4 h-4 mr-1" />
+                          收起
+                        </>
+                      ) : (
+                        <>
+                          <ChevronDown className="w-4 h-4 mr-1" />
+                          展開
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </CardHeader>
+
+                {showCategoryGuide && (
+                  <CardContent>
+                    <div className="grid md:grid-cols-2 gap-3 md:gap-4">
+                      {categories.map((category, index) => (
+                        <div
+                          key={category.name}
+                          className="p-3 md:p-4 rounded-lg bg-slate-800/50 border border-slate-600/30 hover:bg-slate-700/60 transition-all duration-200"
+                        >
+                          <div className="flex items-start gap-2 md:gap-3 mb-2">
+                            <div className="text-lg md:text-2xl">{category.icon}</div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h4 className="font-semibold text-white text-sm md:text-base">{category.name}</h4>
+                                <div
+                                  className="w-2 h-2 md:w-3 md:h-3 rounded-full flex-shrink-0"
+                                  style={{ backgroundColor: category.color }}
+                                ></div>
+                              </div>
+                              <p className="text-xs md:text-sm text-slate-300 leading-relaxed">{category.description}</p>
+                            </div>
+                          </div>
+                          <div className="mt-2 md:mt-3 pt-2 md:pt-3 border-t border-slate-600/30">
+                            <div className="text-xs text-slate-400 mb-2">常見關鍵字：</div>
+                            <div className="flex flex-wrap gap-1">
+                              {category.keywords.slice(0, 6).map((keyword, idx) => (
+                                <Badge
+                                  key={idx}
+                                  variant="secondary"
+                                  className="text-xs px-1.5 md:px-2 py-0.5 bg-slate-600/50 text-slate-300 border-slate-500/50"
+                                >
+                                  {keyword}
+                                </Badge>
+                              ))}
+                              {category.keywords.length > 6 && (
+                                <Badge
+                                  variant="secondary"
+                                  className="text-xs px-1.5 md:px-2 py-0.5 bg-slate-600/30 text-slate-400 border-slate-500/30"
+                                >
+                                  +{category.keywords.length - 6}
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                )}
+              </Card>
+
+              {/* 手機版：垂直佈局，桌面版：並排佈局 */}
+              <div className="space-y-6 md:space-y-0 lg:grid lg:grid-cols-2 lg:gap-8 md:gap-12">
+                {/* 雷達圖 */}
+                <Card className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/50">
+                  <CardHeader>
+                    <CardTitle className="text-lg md:text-xl lg:text-2xl text-white flex items-center gap-2 md:gap-3">
+                      <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-br from-purple-600 to-indigo-700 rounded-full flex items-center justify-center">
+                        <BarChart3 className="w-3 h-3 md:w-4 md:h-4 text-white" />
+                      </div>
+                      問題分布圖譜
+                    </CardTitle>
+                    <CardDescription className="text-white/90 text-xs md:text-sm">
+                      各類職場困擾的完整案例分布（包含私密數據）
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-64 sm:h-80 md:h-64 lg:h-80 xl:h-96">
+                      {stats?.categoryDetails && <RadarChart data={stats.categoryDetails} />}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* 分類詳細統計 */}
+                <Card className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/50">
+                  <CardHeader>
+                    <CardTitle className="text-lg md:text-xl lg:text-2xl text-white flex items-center gap-2 md:gap-3">
+                      <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-br from-cyan-600 to-blue-700 rounded-full flex items-center justify-center">
+                        <Target className="w-3 h-3 md:w-4 md:h-4 text-white" />
+                      </div>
+                      完整案例統計
+                      <Badge className="bg-gradient-to-r from-pink-700/60 to-purple-700/60 text-white border border-pink-400/50 text-xs px-2 py-1">
+                        含私密數據
+                      </Badge>
+                    </CardTitle>
+                    <CardDescription className="text-white/90 text-xs md:text-sm">
+                      每個領域的所有案例數量（包含公開和私密案例）
+                      {stats?.categoryDetails?.filter((cat) => cat.count > 0).length && (
+                        <span className="block text-xs text-slate-400 mt-1">
+                          共 {stats.categoryDetails.filter((cat) => cat.count > 0).length} 個活躍分類
+                          {stats.categoryDetails.filter((cat) => cat.count > 0).length > 4 && "，可滾動查看全部"}
+                        </span>
+                      )}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3 md:space-y-4">
+                    <div className="max-h-64 md:max-h-80 overflow-y-auto pr-2 space-y-3 md:space-y-4 scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800">
+                      {stats?.categoryDetails
+                        ?.filter((cat) => cat.count > 0)
+                        .sort((a, b) => b.count - a.count)
+                        .map((category, index) => (
+                          <div
+                            key={category.name}
+                            className="flex items-center justify-between p-3 md:p-4 rounded-lg bg-slate-700/30 border border-slate-600/30 hover:bg-slate-600/40 transition-all duration-200"
+                          >
+                            <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+                              <div className="text-base md:text-xl">
+                                {categories.find((cat) => cat.name === category.name)?.icon || "❓"}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="font-semibold text-white flex items-center gap-2 mb-1">
+                                  <span className="truncate">{category.name}</span>
+                                  <div
+                                    className="w-2 h-2 md:w-3 md:h-3 rounded-full flex-shrink-0"
+                                    style={{ backgroundColor: category.color }}
+                                  ></div>
+                                  {index < 3 && (
+                                    <span className="text-xs bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-200 px-1.5 md:px-2 py-0.5 rounded-full border border-cyan-500/30 flex-shrink-0">
+                                      TOP {index + 1}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs md:text-sm text-slate-300">{category.count} 個案例</div>
+                                {category.description && (
+                                  <div className="text-xs text-slate-400 mt-1 line-clamp-2">{category.description}</div>
+                                )}
+                              </div>
+                            </div>
+                            <Badge variant="secondary" className="bg-slate-600/50 text-slate-200 flex-shrink-0 ml-2">
+                              {category.percentage}%
                             </Badge>
                           </div>
                         ))}
-                      </div>
                     </div>
 
-                    {/* 時間分布 */}
-                    <div>
-                      <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                        <Users className="w-4 h-4 text-yellow-400" />
-                        創建時間分布
-                      </h3>
-                      <div className="space-y-4">
-                        <div className="p-4 bg-slate-700/30 rounded-lg">
-                          <div className="text-2xl font-bold text-white mb-1">{stats?.recentWishes}</div>
-                          <div className="text-blue-300 text-sm">最近7天新增</div>
-                        </div>
-                        <div className="p-4 bg-slate-700/30 rounded-lg">
-                          <div className="text-2xl font-bold text-white mb-1">{stats?.totalWishes}</div>
-                          <div className="text-blue-300 text-sm">總案例數</div>
+                    {/* 滾動提示 */}
+                    {stats?.categoryDetails?.filter((cat) => cat.count > 0).length && stats.categoryDetails.filter((cat) => cat.count > 0).length > 4 && (
+                      <div className="text-center pt-2 border-t border-slate-600/30">
+                        <div className="text-xs text-slate-400 flex items-center justify-center gap-2">
+                          <div className="w-1 h-1 bg-slate-400 rounded-full animate-bounce"></div>
+                          <span>向下滾動查看更多分類</span>
+                          <div
+                            className="w-1 h-1 bg-slate-400 rounded-full animate-bounce"
+                            style={{ animationDelay: "0.5s" }}
+                          ></div>
                         </div>
                       </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* 熱門關鍵字 */}
+              {stats?.topKeywords && stats.topKeywords.length > 0 && (
+                <Card className="bg-slate-800/50 backdrop-blur-sm border border-slate-600/50">
+                  <CardHeader>
+                    <CardTitle className="text-lg md:text-xl lg:text-2xl text-white flex items-center gap-2 md:gap-3">
+                      <div className="w-6 h-6 md:w-8 md:h-8 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center">
+                        <TrendingUp className="w-3 h-3 md:w-4 md:h-4 text-white" />
+                      </div>
+                      最常見的問題關鍵字
+                    </CardTitle>
+                    <CardDescription className="text-white/90 text-xs md:text-sm">
+                      在所有案例中最常出現的詞彙，反映團隊面臨的核心挑戰
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2 sm:gap-3">
+                      {stats.topKeywords.map((keyword, index) => (
+                        <Badge
+                          key={keyword.word}
+                          variant="secondary"
+                          className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-200 border border-cyan-500/30 px-2 md:px-3 py-1 md:py-1.5 text-xs md:text-sm"
+                        >
+                          {keyword.word} ({keyword.count})
+                        </Badge>
+                      ))}
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
           </Tabs>
         </div>
