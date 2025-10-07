@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Sparkles, MessageCircle, Users, BarChart3 } from "lucide-react"
+import { Sparkles, MessageCircle, Users, BarChart3, Settings } from "lucide-react"
 import HeaderMusicControl from "@/components/header-music-control"
 import IpDisplay from "@/components/ip-display"
 
@@ -118,6 +118,12 @@ export default function HomePage() {
                 <Link href="/submit">
                   <Button className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-lg shadow-cyan-500/25 px-4">
                     分享困擾
+                  </Button>
+                </Link>
+                <Link href="/admin">
+                  <Button variant="ghost" className="text-blue-200 hover:text-white hover:bg-blue-800/50 px-4">
+                    <Settings className="w-4 h-4 mr-2" />
+                    後台管理
                   </Button>
                 </Link>
               </div>
