@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { isIpAllowed, getClientIp } from '@/lib/ip-utils'
+import { isIpAllowed, getClientIp, isValidIp, isValidIPv6 } from '@/lib/ip-utils'
 
 export function middleware(request: NextRequest) {
   // 檢查是否啟用IP白名單
@@ -11,13 +11,24 @@ export function middleware(request: NextRequest) {
   }
 
   // 獲取客戶端IP - 使用與API相同的邏輯
-  const clientIp = getClientIp(request)
+  let clientIp = getClientIp(request)
+  
+  // 根據你的環境，優先使用 cf-connecting-ip (支持IPv4和IPv6)
+  const cfConnectingIp = request.headers.get('cf-connecting-ip')
+  if (cfConnectingIp && cfConnectingIp.trim() !== '') {
+    const cleanCfIp = cfConnectingIp.trim()
+    // 检查是否是有效的IPv4或IPv6地址
+    if (isValidIp(cleanCfIp) || isValidIPv6(cleanCfIp)) {
+      clientIp = cleanCfIp
+      console.log(`[Middleware] 使用 cf-connecting-ip: ${clientIp} ${isValidIPv6(clientIp) ? '(IPv6)' : '(IPv4)'}`)
+    }
+  }
   
   // 獲取允許的IP列表
   const allowedIps = process.env.ALLOWED_IPS || ''
   
   // 調試信息
-  console.log(`[Middleware] IP檢測: ${clientIp}, 路徑: ${request.nextUrl.pathname}`)
+  console.log(`[Middleware] 最終IP檢測: ${clientIp}, 路徑: ${request.nextUrl.pathname}`)
   console.log(`[Middleware] 白名單狀態: ${enableIpWhitelist}`)
   console.log(`[Middleware] 允許的IP: ${allowedIps}`)
   
