@@ -83,23 +83,27 @@ function cleanIpAddress(ip: string): string | null {
 export function getClientIp(req: any): string {
   // 按優先順序檢查各種IP來源
   const ipSources = [
-    // 代理伺服器轉發的IP
+    // 1Panel 和常見代理伺服器轉發的IP (優先級最高)
     req.headers['x-forwarded-for'],
     req.headers['x-real-ip'],
     req.headers['x-client-ip'],
     req.headers['cf-connecting-ip'], // Cloudflare
+    req.headers['x-original-forwarded-for'], // 某些代理伺服器
+    req.headers['x-cluster-client-ip'], // 集群環境
+    
+    // 其他代理頭
     req.headers['x-forwarded'], // 舊版代理頭
     req.headers['forwarded-for'],
     req.headers['forwarded'],
+    
+    // 1Panel 特殊頭部
+    req.headers['x-1panel-client-ip'], // 1Panel 可能使用的頭部
+    req.headers['x-nginx-proxy-real-ip'], // Nginx 代理
     
     // 直接連接的IP
     req.connection?.remoteAddress,
     req.socket?.remoteAddress,
     req.ip,
-    
-    // Next.js 特定的IP來源
-    req.headers['x-original-forwarded-for'],
-    req.headers['x-cluster-client-ip'],
   ];
 
   // 收集所有找到的IP用於調試
@@ -115,8 +119,8 @@ export function getClientIp(req: any): string {
         const cleanIp = cleanIpAddress(ip);
         if (cleanIp) {
           foundIps.push(cleanIp);
-          // 檢查是否為公網IP
-          if (isPublicIp(cleanIp)) {
+          // 檢查是否為公網IP，排除內部IP和1Panel代理IP
+          if (isPublicIp(cleanIp) && !isInternalProxyIp(cleanIp)) {
             return cleanIp;
           }
         }
@@ -185,6 +189,207 @@ function isPublicIp(ip: string): boolean {
   ];
   
   return !privateRanges.some(range => range.test(ip));
+}
+
+// 檢查是否為內部代理IP (如1Panel、Cloudflare等)
+function isInternalProxyIp(ip: string): boolean {
+  // 1Panel 和常見代理服務器的內部IP範圍
+  const proxyRanges = [
+    /^172\.70\./, // Cloudflare 內部IP (包含你遇到的 172.70.214.246)
+    /^172\.71\./, // Cloudflare 內部IP
+    /^172\.64\./, // Cloudflare 內部IP
+    /^172\.65\./, // Cloudflare 內部IP
+    /^172\.66\./, // Cloudflare 內部IP
+    /^172\.67\./, // Cloudflare 內部IP
+    /^172\.68\./, // Cloudflare 內部IP
+    /^172\.69\./, // Cloudflare 內部IP
+    /^172\.72\./, // Cloudflare 內部IP
+    /^172\.73\./, // Cloudflare 內部IP
+    /^172\.74\./, // Cloudflare 內部IP
+    /^172\.75\./, // Cloudflare 內部IP
+    /^172\.76\./, // Cloudflare 內部IP
+    /^172\.77\./, // Cloudflare 內部IP
+    /^172\.78\./, // Cloudflare 內部IP
+    /^172\.79\./, // Cloudflare 內部IP
+    /^172\.80\./, // Cloudflare 內部IP
+    /^172\.81\./, // Cloudflare 內部IP
+    /^172\.82\./, // Cloudflare 內部IP
+    /^172\.83\./, // Cloudflare 內部IP
+    /^172\.84\./, // Cloudflare 內部IP
+    /^172\.85\./, // Cloudflare 內部IP
+    /^172\.86\./, // Cloudflare 內部IP
+    /^172\.87\./, // Cloudflare 內部IP
+    /^172\.88\./, // Cloudflare 內部IP
+    /^172\.89\./, // Cloudflare 內部IP
+    /^172\.90\./, // Cloudflare 內部IP
+    /^172\.91\./, // Cloudflare 內部IP
+    /^172\.92\./, // Cloudflare 內部IP
+    /^172\.93\./, // Cloudflare 內部IP
+    /^172\.94\./, // Cloudflare 內部IP
+    /^172\.95\./, // Cloudflare 內部IP
+    /^172\.96\./, // Cloudflare 內部IP
+    /^172\.97\./, // Cloudflare 內部IP
+    /^172\.98\./, // Cloudflare 內部IP
+    /^172\.99\./, // Cloudflare 內部IP
+    /^172\.100\./, // Cloudflare 內部IP
+    /^172\.101\./, // Cloudflare 內部IP
+    /^172\.102\./, // Cloudflare 內部IP
+    /^172\.103\./, // Cloudflare 內部IP
+    /^172\.104\./, // Cloudflare 內部IP
+    /^172\.105\./, // Cloudflare 內部IP
+    /^172\.106\./, // Cloudflare 內部IP
+    /^172\.107\./, // Cloudflare 內部IP
+    /^172\.108\./, // Cloudflare 內部IP
+    /^172\.109\./, // Cloudflare 內部IP
+    /^172\.110\./, // Cloudflare 內部IP
+    /^172\.111\./, // Cloudflare 內部IP
+    /^172\.112\./, // Cloudflare 內部IP
+    /^172\.113\./, // Cloudflare 內部IP
+    /^172\.114\./, // Cloudflare 內部IP
+    /^172\.115\./, // Cloudflare 內部IP
+    /^172\.116\./, // Cloudflare 內部IP
+    /^172\.117\./, // Cloudflare 內部IP
+    /^172\.118\./, // Cloudflare 內部IP
+    /^172\.119\./, // Cloudflare 內部IP
+    /^172\.120\./, // Cloudflare 內部IP
+    /^172\.121\./, // Cloudflare 內部IP
+    /^172\.122\./, // Cloudflare 內部IP
+    /^172\.123\./, // Cloudflare 內部IP
+    /^172\.124\./, // Cloudflare 內部IP
+    /^172\.125\./, // Cloudflare 內部IP
+    /^172\.126\./, // Cloudflare 內部IP
+    /^172\.127\./, // Cloudflare 內部IP
+    /^172\.128\./, // Cloudflare 內部IP
+    /^172\.129\./, // Cloudflare 內部IP
+    /^172\.130\./, // Cloudflare 內部IP
+    /^172\.131\./, // Cloudflare 內部IP
+    /^172\.132\./, // Cloudflare 內部IP
+    /^172\.133\./, // Cloudflare 內部IP
+    /^172\.134\./, // Cloudflare 內部IP
+    /^172\.135\./, // Cloudflare 內部IP
+    /^172\.136\./, // Cloudflare 內部IP
+    /^172\.137\./, // Cloudflare 內部IP
+    /^172\.138\./, // Cloudflare 內部IP
+    /^172\.139\./, // Cloudflare 內部IP
+    /^172\.140\./, // Cloudflare 內部IP
+    /^172\.141\./, // Cloudflare 內部IP
+    /^172\.142\./, // Cloudflare 內部IP
+    /^172\.143\./, // Cloudflare 內部IP
+    /^172\.144\./, // Cloudflare 內部IP
+    /^172\.145\./, // Cloudflare 內部IP
+    /^172\.146\./, // Cloudflare 內部IP
+    /^172\.147\./, // Cloudflare 內部IP
+    /^172\.148\./, // Cloudflare 內部IP
+    /^172\.149\./, // Cloudflare 內部IP
+    /^172\.150\./, // Cloudflare 內部IP
+    /^172\.151\./, // Cloudflare 內部IP
+    /^172\.152\./, // Cloudflare 內部IP
+    /^172\.153\./, // Cloudflare 內部IP
+    /^172\.154\./, // Cloudflare 內部IP
+    /^172\.155\./, // Cloudflare 內部IP
+    /^172\.156\./, // Cloudflare 內部IP
+    /^172\.157\./, // Cloudflare 內部IP
+    /^172\.158\./, // Cloudflare 內部IP
+    /^172\.159\./, // Cloudflare 內部IP
+    /^172\.160\./, // Cloudflare 內部IP
+    /^172\.161\./, // Cloudflare 內部IP
+    /^172\.162\./, // Cloudflare 內部IP
+    /^172\.163\./, // Cloudflare 內部IP
+    /^172\.164\./, // Cloudflare 內部IP
+    /^172\.165\./, // Cloudflare 內部IP
+    /^172\.166\./, // Cloudflare 內部IP
+    /^172\.167\./, // Cloudflare 內部IP
+    /^172\.168\./, // Cloudflare 內部IP
+    /^172\.169\./, // Cloudflare 內部IP
+    /^172\.170\./, // Cloudflare 內部IP
+    /^172\.171\./, // Cloudflare 內部IP
+    /^172\.172\./, // Cloudflare 內部IP
+    /^172\.173\./, // Cloudflare 內部IP
+    /^172\.174\./, // Cloudflare 內部IP
+    /^172\.175\./, // Cloudflare 內部IP
+    /^172\.176\./, // Cloudflare 內部IP
+    /^172\.177\./, // Cloudflare 內部IP
+    /^172\.178\./, // Cloudflare 內部IP
+    /^172\.179\./, // Cloudflare 內部IP
+    /^172\.180\./, // Cloudflare 內部IP
+    /^172\.181\./, // Cloudflare 內部IP
+    /^172\.182\./, // Cloudflare 內部IP
+    /^172\.183\./, // Cloudflare 內部IP
+    /^172\.184\./, // Cloudflare 內部IP
+    /^172\.185\./, // Cloudflare 內部IP
+    /^172\.186\./, // Cloudflare 內部IP
+    /^172\.187\./, // Cloudflare 內部IP
+    /^172\.188\./, // Cloudflare 內部IP
+    /^172\.189\./, // Cloudflare 內部IP
+    /^172\.190\./, // Cloudflare 內部IP
+    /^172\.191\./, // Cloudflare 內部IP
+    /^172\.192\./, // Cloudflare 內部IP
+    /^172\.193\./, // Cloudflare 內部IP
+    /^172\.194\./, // Cloudflare 內部IP
+    /^172\.195\./, // Cloudflare 內部IP
+    /^172\.196\./, // Cloudflare 內部IP
+    /^172\.197\./, // Cloudflare 內部IP
+    /^172\.198\./, // Cloudflare 內部IP
+    /^172\.199\./, // Cloudflare 內部IP
+    /^172\.200\./, // Cloudflare 內部IP
+    /^172\.201\./, // Cloudflare 內部IP
+    /^172\.202\./, // Cloudflare 內部IP
+    /^172\.203\./, // Cloudflare 內部IP
+    /^172\.204\./, // Cloudflare 內部IP
+    /^172\.205\./, // Cloudflare 內部IP
+    /^172\.206\./, // Cloudflare 內部IP
+    /^172\.207\./, // Cloudflare 內部IP
+    /^172\.208\./, // Cloudflare 內部IP
+    /^172\.209\./, // Cloudflare 內部IP
+    /^172\.210\./, // Cloudflare 內部IP
+    /^172\.211\./, // Cloudflare 內部IP
+    /^172\.212\./, // Cloudflare 內部IP
+    /^172\.213\./, // Cloudflare 內部IP
+    /^172\.214\./, // Cloudflare 內部IP
+    /^172\.215\./, // Cloudflare 內部IP
+    /^172\.216\./, // Cloudflare 內部IP
+    /^172\.217\./, // Cloudflare 內部IP
+    /^172\.218\./, // Cloudflare 內部IP
+    /^172\.219\./, // Cloudflare 內部IP
+    /^172\.220\./, // Cloudflare 內部IP
+    /^172\.221\./, // Cloudflare 內部IP
+    /^172\.222\./, // Cloudflare 內部IP
+    /^172\.223\./, // Cloudflare 內部IP
+    /^172\.224\./, // Cloudflare 內部IP
+    /^172\.225\./, // Cloudflare 內部IP
+    /^172\.226\./, // Cloudflare 內部IP
+    /^172\.227\./, // Cloudflare 內部IP
+    /^172\.228\./, // Cloudflare 內部IP
+    /^172\.229\./, // Cloudflare 內部IP
+    /^172\.230\./, // Cloudflare 內部IP
+    /^172\.231\./, // Cloudflare 內部IP
+    /^172\.232\./, // Cloudflare 內部IP
+    /^172\.233\./, // Cloudflare 內部IP
+    /^172\.234\./, // Cloudflare 內部IP
+    /^172\.235\./, // Cloudflare 內部IP
+    /^172\.236\./, // Cloudflare 內部IP
+    /^172\.237\./, // Cloudflare 內部IP
+    /^172\.238\./, // Cloudflare 內部IP
+    /^172\.239\./, // Cloudflare 內部IP
+    /^172\.240\./, // Cloudflare 內部IP
+    /^172\.241\./, // Cloudflare 內部IP
+    /^172\.242\./, // Cloudflare 內部IP
+    /^172\.243\./, // Cloudflare 內部IP
+    /^172\.244\./, // Cloudflare 內部IP
+    /^172\.245\./, // Cloudflare 內部IP
+    /^172\.246\./, // Cloudflare 內部IP
+    /^172\.247\./, // Cloudflare 內部IP
+    /^172\.248\./, // Cloudflare 內部IP
+    /^172\.249\./, // Cloudflare 內部IP
+    /^172\.250\./, // Cloudflare 內部IP
+    /^172\.251\./, // Cloudflare 內部IP
+    /^172\.252\./, // Cloudflare 內部IP
+    /^172\.253\./, // Cloudflare 內部IP
+    /^172\.254\./, // Cloudflare 內部IP
+    /^172\.255\./, // Cloudflare 內部IP
+  ];
+  
+  return proxyRanges.some(range => range.test(ip));
 }
 
 // 驗證IP地址格式

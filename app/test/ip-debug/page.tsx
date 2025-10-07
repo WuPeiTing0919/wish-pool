@@ -1,11 +1,10 @@
-'use client'
+"use client"
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
-import { Globe, Info, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react'
+import { useEffect, useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { RefreshCw, Shield, AlertTriangle, CheckCircle } from "lucide-react"
 
 interface IpDebugInfo {
   ip: string
@@ -13,20 +12,26 @@ interface IpDebugInfo {
   enableIpWhitelist: boolean
   allowedIps: string[]
   timestamp: string
-  debug: {
-    allIpSources: Record<string, string | null>
-    allFoundIps: string[]
-    isLocalDevelopment: boolean
-    localIp: string | null
-    environment: string
-    host: string | null
-    referer: string | null
-    userAgent: string | null
-    originalDetectedIp: string
-    finalDetectedIp: string
+  debug?: {
+    allIpSources?: Record<string, string | null>
+    allFoundIps?: string[]
+    isLocalDevelopment?: boolean
+    localIp?: string | null
+    environment?: string
+    host?: string
+    referer?: string
+    userAgent?: string
+    originalDetectedIp?: string
+    finalDetectedIp?: string
+    rawDetectedIp?: string
+    ipDetectionMethod?: string
   }
-  location: any
-  development: any
+  ipv6Info?: {
+    isIPv6Mapped: boolean
+    originalFormat: string
+    ipv6Format: string
+    hasIPv6Support: boolean
+  }
 }
 
 export default function IpDebugPage() {
@@ -45,8 +50,8 @@ export default function IpDebugPage() {
       const data = await response.json()
       setIpInfo(data)
     } catch (error) {
-      console.error('Error fetching IP info:', error)
-      setError('無法獲取IP信息')
+      console.error("無法獲取IP信息:", error)
+      setError("無法獲取IP信息")
     } finally {
       setLoading(false)
     }
@@ -58,10 +63,12 @@ export default function IpDebugPage() {
 
   if (loading) {
     return (
-      <div className="container mx-auto p-6 max-w-6xl">
-        <div className="text-center">
-          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4" />
-          <p>載入中...</p>
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="w-4 h-4 animate-spin" />
+            <span>載入中...</span>
+          </div>
         </div>
       </div>
     )
@@ -69,199 +76,226 @@ export default function IpDebugPage() {
 
   if (error || !ipInfo) {
     return (
-      <div className="container mx-auto p-6 max-w-6xl">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
+      <div className="container mx-auto p-6">
+        <Card className="border-red-200 bg-red-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-red-600">
+              <AlertTriangle className="w-5 h-5" />
+              錯誤
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-red-600">{error}</p>
+            <Button onClick={fetchIpInfo} className="mt-4">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              重試
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto p-6 max-w-6xl space-y-6">
-      <div className="text-center">
-        <h1 className="text-3xl font-bold mb-2">IP 調試信息</h1>
-        <p className="text-muted-foreground">詳細的IP檢測和調試信息</p>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-3xl font-bold">IP 檢測調試</h1>
+        <Button onClick={fetchIpInfo} variant="outline">
+          <RefreshCw className="w-4 h-4 mr-2" />
+          刷新
+        </Button>
       </div>
 
       {/* 主要IP信息 */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Globe className="w-5 h-5" />
-            檢測到的IP地址
+            {ipInfo.enableIpWhitelist && !ipInfo.isAllowed ? (
+              <>
+                <AlertTriangle className="w-5 h-5 text-red-500" />
+                IP 被拒絕
+              </>
+            ) : (
+              <>
+                <CheckCircle className="w-5 h-5 text-green-500" />
+                IP 檢測正常
+              </>
+            )}
           </CardTitle>
-          <CardDescription>
-            系統檢測到的主要IP地址信息
-          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <h4 className="font-medium mb-2">最終檢測到的IP</h4>
-              <Badge variant="default" className="text-sm">
+              <label className="text-sm font-medium text-gray-500">檢測到的IP</label>
+              <p className="text-lg font-mono bg-gray-100 p-2 rounded">
                 {ipInfo.ip}
-              </Badge>
+              </p>
             </div>
             <div>
-              <h4 className="font-medium mb-2">原始檢測到的IP</h4>
-              <Badge variant="outline" className="text-sm">
-                {ipInfo.debug.originalDetectedIp}
-              </Badge>
-            </div>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <h4 className="font-medium mb-2">IP白名單狀態</h4>
-              <Badge variant={ipInfo.isAllowed ? "default" : "destructive"}>
-                {ipInfo.isAllowed ? '允許' : '拒絕'}
-              </Badge>
-            </div>
-            <div>
-              <h4 className="font-medium mb-2">白名單功能</h4>
-              <Badge variant={ipInfo.enableIpWhitelist ? "default" : "secondary"}>
-                {ipInfo.enableIpWhitelist ? '已啟用' : '已禁用'}
-              </Badge>
-            </div>
-            <div>
-              <h4 className="font-medium mb-2">環境</h4>
-              <Badge variant="outline">
-                {ipInfo.debug.environment}
-              </Badge>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 所有找到的IP */}
-      <Card>
-        <CardHeader>
-          <CardTitle>所有檢測到的IP地址</CardTitle>
-          <CardDescription>
-            從各種來源檢測到的所有IP地址
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {ipInfo.debug.allFoundIps.length > 0 ? (
-              ipInfo.debug.allFoundIps.map((ip, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <Badge variant="outline" className="font-mono">
-                    {ip}
-                  </Badge>
-                  {ip === ipInfo.ip && (
-                    <Badge variant="default" className="text-xs">
-                      最終選擇
-                    </Badge>
-                  )}
-                </div>
-              ))
-            ) : (
-              <p className="text-muted-foreground">沒有檢測到任何IP地址</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* IP來源詳細信息 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>IP來源詳細信息</CardTitle>
-          <CardDescription>
-            各種HTTP頭和連接信息中的IP地址
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {Object.entries(ipInfo.debug.allIpSources).map(([source, value]) => (
-              <div key={source} className="flex items-center justify-between p-2 bg-muted rounded">
-                <span className="font-medium text-sm">{source}:</span>
-                <span className="font-mono text-sm">
-                  {value || '未設置'}
-                </span>
+              <label className="text-sm font-medium text-gray-500">狀態</label>
+              <div className="mt-1">
+                <Badge variant={ipInfo.isAllowed ? "default" : "destructive"}>
+                  {ipInfo.isAllowed ? "允許" : "拒絕"}
+                </Badge>
               </div>
-            ))}
+            </div>
           </div>
+
+          {ipInfo.enableIpWhitelist && (
+            <div>
+              <label className="text-sm font-medium text-gray-500">白名單狀態</label>
+              <div className="flex items-center gap-2 mt-1">
+                <Shield className="w-4 h-4 text-blue-500" />
+                <span className="text-sm">已啟用</span>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* 本地開發環境信息 */}
-      {ipInfo.development && (
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertDescription>
-            <div className="font-medium mb-2">{ipInfo.development.message}</div>
-            <div className="text-sm space-y-1">
-              {ipInfo.development.suggestions.map((suggestion, index) => (
-                <div key={index}>• {suggestion}</div>
-              ))}
-            </div>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* 地理位置信息 */}
-      {ipInfo.location && (
+      {/* 詳細調試信息 */}
+      {ipInfo.debug && (
         <Card>
           <CardHeader>
-            <CardTitle>地理位置信息</CardTitle>
-            <CardDescription>
-              IP地址的地理位置信息
-            </CardDescription>
+            <CardTitle>詳細調試信息</CardTitle>
           </CardHeader>
-          <CardContent>
-            <pre className="bg-muted p-4 rounded text-sm overflow-auto">
-              {JSON.stringify(ipInfo.location, null, 2)}
-            </pre>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium text-gray-500">環境</label>
+                <p className="text-sm bg-gray-100 p-2 rounded">
+                  {ipInfo.debug.environment || '未知'}
+                </p>
+              </div>
+              <div>
+                <label className="text-sm font-medium text-gray-500">檢測方法</label>
+                <p className="text-sm bg-gray-100 p-2 rounded">
+                  {ipInfo.debug.ipDetectionMethod || '未知'}
+                </p>
+              </div>
+            </div>
+
+            {ipInfo.debug.allFoundIps && ipInfo.debug.allFoundIps.length > 0 && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">所有檢測到的IP</label>
+                <div className="mt-1 space-y-1">
+                  {ipInfo.debug.allFoundIps.map((ip, index) => (
+                    <div key={index} className="text-sm bg-gray-100 p-2 rounded font-mono">
+                      {ip}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {ipInfo.debug.allIpSources && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">所有IP來源</label>
+                <div className="mt-1 space-y-2 max-h-60 overflow-y-auto">
+                  {Object.entries(ipInfo.debug.allIpSources).map(([key, value]) => (
+                    <div key={key} className="text-sm bg-gray-100 p-2 rounded">
+                      <span className="font-medium">{key}:</span>
+                      <span className="ml-2 font-mono">{value || 'null'}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {/* 其他調試信息 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>其他調試信息</CardTitle>
-          <CardDescription>
-            額外的調試和環境信息
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
+      {/* IPv6信息 */}
+      {ipInfo.ipv6Info && (
+        <Card>
+          <CardHeader>
+            <CardTitle>IPv6 信息</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <h4 className="font-medium mb-2">主機</h4>
-                <p className="text-sm font-mono">{ipInfo.debug.host || '未設置'}</p>
+                <label className="text-sm font-medium text-gray-500">IPv6映射</label>
+                <Badge variant={ipInfo.ipv6Info.isIPv6Mapped ? "default" : "secondary"}>
+                  {ipInfo.ipv6Info.isIPv6Mapped ? "是" : "否"}
+                </Badge>
               </div>
               <div>
-                <h4 className="font-medium mb-2">引用來源</h4>
-                <p className="text-sm font-mono">{ipInfo.debug.referer || '未設置'}</p>
+                <label className="text-sm font-medium text-gray-500">IPv6支援</label>
+                <Badge variant={ipInfo.ipv6Info.hasIPv6Support ? "default" : "secondary"}>
+                  {ipInfo.ipv6Info.hasIPv6Support ? "已啟用" : "未啟用"}
+                </Badge>
               </div>
             </div>
-            <div>
-              <h4 className="font-medium mb-2">用戶代理</h4>
-              <p className="text-sm font-mono break-all">{ipInfo.debug.userAgent || '未設置'}</p>
+            {ipInfo.ipv6Info.isIPv6Mapped && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">IPv6格式</label>
+                <p className="text-sm bg-gray-100 p-2 rounded font-mono">
+                  {ipInfo.ipv6Info.ipv6Format}
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 允許的IP列表 */}
+      {ipInfo.enableIpWhitelist && ipInfo.allowedIps.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>允許的IP列表</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+              {ipInfo.allowedIps.map((ip, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <Badge variant={ip === ipInfo.ip ? "default" : "outline"}>
+                    {ip === ipInfo.ip ? "當前" : ""}
+                  </Badge>
+                  <span className="text-sm font-mono">{ip}</span>
+                </div>
+              ))}
             </div>
-            <div>
-              <h4 className="font-medium mb-2">時間戳</h4>
-              <p className="text-sm">{ipInfo.timestamp}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 建議 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>建議</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {!ipInfo.enableIpWhitelist && (
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
+              <p className="text-sm text-yellow-800">
+                ⚠️ IP白名單功能未啟用。如果您的IP檢測正常，建議啟用白名單功能以提高安全性。
+              </p>
             </div>
+          )}
+          
+          {ipInfo.enableIpWhitelist && !ipInfo.isAllowed && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded">
+              <p className="text-sm text-red-800">
+                ❌ 您的IP不在允許列表中。請聯繫管理員將您的IP添加到白名單。
+              </p>
+            </div>
+          )}
+
+          {ipInfo.ip.startsWith('172.70.') && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+              <p className="text-sm text-blue-800">
+                💡 檢測到Cloudflare代理IP。系統已優化處理此類代理IP，會嘗試獲取您的真實IP。
+              </p>
+            </div>
+          )}
+
+          <div className="p-3 bg-green-50 border border-green-200 rounded">
+            <p className="text-sm text-green-800">
+              ✅ 如果IP檢測仍有問題，請檢查1Panel的反向代理配置，確保正確轉發客戶端IP頭部。
+            </p>
           </div>
         </CardContent>
       </Card>
-
-      {/* 操作按鈕 */}
-      <div className="flex justify-center gap-4">
-        <Button onClick={fetchIpInfo} className="flex items-center gap-2">
-          <RefreshCw className="w-4 h-4" />
-          重新檢測
-        </Button>
-        <Button variant="outline" onClick={() => window.open('/api/ip', '_blank')}>
-          <Globe className="w-4 h-4 mr-2" />
-          查看API響應
-        </Button>
-      </div>
     </div>
   )
-} 
+}
