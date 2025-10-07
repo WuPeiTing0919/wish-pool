@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { PrismaClient } from '@prisma/client'
-import { execSync } from 'child_process'
 
 const prisma = new PrismaClient()
 
@@ -48,16 +47,6 @@ export async function POST(request: NextRequest) {
       updated_at: wish.updatedAt.toISOString()
     }
     
-    // 創建成功後，更新數據文件
-    try {
-      console.log('🔄 更新數據文件...')
-      execSync('node scripts/get-real-data.js', { stdio: 'pipe' })
-      console.log('✅ 數據文件更新完成')
-    } catch (updateError) {
-      console.warn('⚠️ 數據文件更新失敗:', updateError)
-      // 不影響創建結果，只是警告
-    }
-
     return NextResponse.json({ success: true, data: formattedWish })
   } catch (error) {
     console.error('API Error:', error)

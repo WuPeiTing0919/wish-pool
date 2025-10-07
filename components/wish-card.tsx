@@ -107,8 +107,22 @@ export default function WishCard({ wish }: WishCardProps) {
       
       if (result.success && result.data.liked) {
         // 更新本地狀態
-        setLikeCount(prev => prev + 1)
         setHasLiked(true)
+        
+        // 即時獲取最新的點讚數
+        try {
+          const countResponse = await fetch(`/api/wishes/like-count?wishId=${wish.id}`)
+          const countResult = await countResponse.json()
+          if (countResult.success) {
+            setLikeCount(countResult.data.likeCount)
+          } else {
+            // 如果獲取失敗，使用本地計算
+            setLikeCount(prev => prev + 1)
+          }
+        } catch (countError) {
+          console.warn('獲取點讚數失敗，使用本地計算:', countError)
+          setLikeCount(prev => prev + 1)
+        }
         
         // 播放成功音效
         setTimeout(async () => {
